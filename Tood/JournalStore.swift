@@ -1,4 +1,5 @@
 import Foundation
+import TootShared
 import Observation
 
 /// Owns the journal's one-entry-per-day model. `@Observable` so the Home

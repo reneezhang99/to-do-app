@@ -1,4 +1,5 @@
 import SwiftUI
+import TootShared
 
 /// First-run only. Reuses the exact same defaults `SettingsView` edits later
 /// (same `StickyColor`/`StickyFont` statics, same `AppSettings` shortcuts) —

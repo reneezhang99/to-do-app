@@ -1,4 +1,5 @@
 import SwiftUI
+import TootShared
 
 /// A full-size, read-only look at an archived sticky — same paper, grain,
 /// date/title layout, and checkbox styling as the real thing (StickyRootView),

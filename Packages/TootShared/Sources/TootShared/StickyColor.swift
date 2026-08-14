@@ -2,7 +2,7 @@ import SwiftUI
 
 /// The five colors in the initial (free) pack. Color is chosen per-sticky.
 /// Hex values come straight from Renee's Figma file.
-enum StickyColor: String, CaseIterable, Codable, Identifiable {
+public enum StickyColor: String, CaseIterable, Codable, Identifiable {
     case pink       // #FE9591 — default
     case cream      // #F8E6CF
     case blue       // #72D6E9
@@ -16,9 +16,9 @@ enum StickyColor: String, CaseIterable, Codable, Identifiable {
     case candyYellow    // #FFE74E
     case candyMint      // #94F48F
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .pink:   return "Pink"
         case .cream:  return "Cream"
@@ -34,7 +34,7 @@ enum StickyColor: String, CaseIterable, Codable, Identifiable {
     }
 
     /// The sticky "paper" fill.
-    var paper: Color {
+    public var paper: Color {
         switch self {
         case .pink:   return hex(0xFE9591)
         case .cream:  return hex(0xF8E6CF)
@@ -50,7 +50,7 @@ enum StickyColor: String, CaseIterable, Codable, Identifiable {
     }
 
     /// Which paid pack unlocks this color — `nil` for the free built-in five.
-    var pack: ColorPack? {
+    public var pack: ColorPack? {
         switch self {
         case .candyLavender, .candyCoral, .candyPink, .candyYellow, .candyMint:
             return .candy
@@ -60,16 +60,16 @@ enum StickyColor: String, CaseIterable, Codable, Identifiable {
     }
 
     /// Ink for the "To Do" title (#232320).
-    var titleInk: Color { hex(0x232320) }
+    public var titleInk: Color { hex(0x232320) }
 
     /// Ink for items, checkbox, divider and the date (#20211E).
-    var ink: Color { hex(0x20211E) }
+    public var ink: Color { hex(0x20211E) }
 
     /// Grey for completed (struck-through) items.
-    var inkSecondary: Color { ink.opacity(0.45) }
+    public var inkSecondary: Color { ink.opacity(0.45) }
 
     /// Hairline divider under each checklist row.
-    var divider: Color { ink.opacity(0.18) }
+    public var divider: Color { ink.opacity(0.18) }
 
     private func hex(_ v: UInt32) -> Color {
         Color(.sRGB,
@@ -85,7 +85,7 @@ extension StickyColor {
     /// The color new stickies are created with, set from the status-bar
     /// menu. `nil` means no default has been chosen — new stickies get a
     /// random color instead (see `nextNewStickyColor()`).
-    static var defaultColor: StickyColor? {
+    public static var defaultColor: StickyColor? {
         get { UserDefaults.standard.string(forKey: defaultsKey).flatMap(StickyColor.init) }
         set {
             if let newValue {
@@ -102,7 +102,7 @@ extension StickyColor {
 
     /// What a freshly-created sticky should be colored: the chosen default,
     /// or the next color in the cycle if none has been set.
-    static func nextNewStickyColor() -> StickyColor {
+    public static func nextNewStickyColor() -> StickyColor {
         if let defaultColor { return defaultColor }
         let index = UserDefaults.standard.integer(forKey: cycleIndexKey) // 0 if never set
         UserDefaults.standard.set(index + 1, forKey: cycleIndexKey)

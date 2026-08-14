@@ -1,4 +1,5 @@
 import AppKit
+import TootShared
 
 /// Builds and keeps the menu-bar item's menu in sync with the sticky set.
 @MainActor

@@ -12,6 +12,7 @@
 
 /* Begin PBXBuildFile section */
 	D300000000000000000000D3 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = D200000000000000000000D2 /* Sparkle */; };
+	E300000000000000000000E3 /* TootShared in Frameworks */ = {isa = PBXBuildFile; productRef = E200000000000000000000E2 /* TootShared */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -41,6 +42,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D300000000000000000000D3 /* Sparkle in Frameworks */,
+				E300000000000000000000E3 /* TootShared in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -84,6 +86,7 @@
 			name = Tood;
 			packageProductDependencies = (
 				D200000000000000000000D2 /* Sparkle */,
+				E200000000000000000000E2 /* TootShared */,
 			);
 			productName = Tood;
 			productReference = A500000000000000000000A5 /* Tood.app */;
@@ -115,6 +118,7 @@
 			mainGroup = A300000000000000000000A3;
 			packageReferences = (
 				D100000000000000000000D1 /* XCRemoteSwiftPackageReference "Sparkle" */,
+				E100000000000000000000E1 /* XCLocalSwiftPackageReference "Packages/TootShared" */,
 			);
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
@@ -304,6 +308,20 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D100000000000000000000D1 /* XCRemoteSwiftPackageReference "Sparkle" */;
 			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		E100000000000000000000E1 /* XCLocalSwiftPackageReference "Packages/TootShared" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/TootShared;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		E200000000000000000000E2 /* TootShared */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TootShared;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -1,15 +1,5 @@
 import Foundation
-
-/// A whole sticky, archived when the user picks "Archive" over "Delete" from
-/// the close confirmation — a full snapshot (title, items, color, day) kept
-/// as a browsable memory of finished stickies, distinct from
-/// `ArchiveService`'s `ArchivedItem`s (individual completed tasks swept out
-/// nightly for the stats, not whole stickies).
-struct ArchivedSticky: Codable, Identifiable {
-    var id: UUID
-    var data: StickyData
-    var archivedAt: Date
-}
+import TootShared
 
 /// Append-mostly JSON archive alongside the sticky store. "Mostly" — the
 /// archive view also allows permanently deleting an entry to actually clean

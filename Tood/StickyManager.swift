@@ -1,5 +1,6 @@
 import AppKit
 import Observation
+import TootShared
 
 /// Owns every sticky controller and the shared services. Handles restore,
 /// create, remove, show/hide, debounced saving, and the day rollover.

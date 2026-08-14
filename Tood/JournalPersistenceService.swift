@@ -1,4 +1,5 @@
 import Foundation
+import TootShared
 
 /// Reads/writes journal entries as JSON in the same Application Support
 /// directory as the stickies — local storage only, same pattern as

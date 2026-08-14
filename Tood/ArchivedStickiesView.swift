@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import TootShared
 
 /// A quiet, read-only browse of finished stickies — archived instead of
 /// deleted from the close confirmation, kept as a memory rather than living

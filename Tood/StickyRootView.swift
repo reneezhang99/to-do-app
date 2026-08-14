@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import TootShared
 
 /// The visible sticky: flat, edge-to-edge paper with a big two-line "To Do"
 /// title, a date, and an editable checklist. Hosted in a borderless window.

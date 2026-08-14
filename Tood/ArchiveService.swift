@@ -1,19 +1,5 @@
 import Foundation
-
-/// A completed task moved out of a sticky at the end of the day. Kept for
-/// history and, later, analytics ("how many tasks completed").
-struct ArchivedItem: Codable, Identifiable {
-    var id: UUID
-    var text: String
-    var stickyID: UUID
-    var stickyTitle: String
-    var completedAt: Date?
-    var archivedOn: Date
-    /// The sticky's color at archive time, for the Home insight card's
-    /// colored task dots. Optional so older archive files without this
-    /// field still decode fine — those just show as `nil`.
-    var stickyColor: StickyColor?
-}
+import TootShared
 
 /// Append-only JSON archive alongside the sticky store.
 struct ArchiveService {

@@ -1,4 +1,5 @@
 import Foundation
+import TootShared
 
 /// A single completed task as shown in the Home insight card. Enough to
 /// render a colored dot (from whichever sticky it lived on) and its exact

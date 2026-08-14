@@ -1,4 +1,5 @@
 import SwiftUI
+import TootShared
 
 /// Shared sizing so the fan layout math and the card itself never drift
 /// apart. Narrower/taller than the first pass — closer to the real

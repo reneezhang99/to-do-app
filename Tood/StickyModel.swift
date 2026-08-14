@@ -1,27 +1,12 @@
 import Foundation
 import Observation
-
-/// Plain `Codable` snapshot written to disk. Kept separate from the runtime
-/// `@Observable` model because the Observation macro doesn't encode cleanly.
-struct StickyData: Codable, Identifiable {
-    var id: UUID
-    var title: String
-    /// Leftover from a short-lived separate icon field — some stickies were
-    /// saved with the emoji split out into this key instead of being the
-    /// title's first character. Never written anymore (`StickyModel.init`
-    /// merges it straight back into `title` on load and drops it), kept
-    /// here only so those already-split saves decode losslessly instead of
-    /// silently dropping their icon.
-    var emoji: String?
-    var day: Date
-    var items: [TodoItem]
-    var colorID: StickyColor
-    var fontID: StickyFont
-    var frame: CGRect
-    var isVisible: Bool
-}
+import TootShared
 
 /// Runtime model for a single sticky. SwiftUI observes it directly.
+/// `StickyData`, the plain `Codable` snapshot this wraps, lives in the
+/// TootShared package now — shared with the iOS app — since the
+/// Observation macro doesn't encode cleanly and this class's AppKit-focus-
+/// bridging design is Mac-specific even where its imports aren't.
 @MainActor
 @Observable
 final class StickyModel: Identifiable {

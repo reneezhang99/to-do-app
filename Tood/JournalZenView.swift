@@ -1,4 +1,5 @@
 import SwiftUI
+import TootShared
 
 /// The journal, Notes app style: a sidebar of past entries next to the
 /// current day's writing surface, not a separate history window stacked on

@@ -1,4 +1,5 @@
 import Foundation
+import TootShared
 import Observation
 
 /// Settings not already owned by `StickyColor`/`StickyFont`/`StickyCorner`
