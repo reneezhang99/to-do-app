@@ -3,20 +3,20 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 70;
 	objects = {
+
+/* Begin PBXBuildFile section */
+		D300000000000000000000D3 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = D200000000000000000000D2 /* Sparkle */; };
+		E300000000000000000000E3 /* TootShared in Frameworks */ = {isa = PBXBuildFile; productRef = E200000000000000000000E2 /* TootShared */; };
+/* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		A500000000000000000000A5 /* Tood.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tood.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXBuildFile section */
-	D300000000000000000000D3 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = D200000000000000000000D2 /* Sparkle */; };
-	E300000000000000000000E3 /* TootShared in Frameworks */ = {isa = PBXBuildFile; productRef = E200000000000000000000E2 /* TootShared */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		C100000000000000000000C1 /* Exceptions for "Tood" folder in "Tood" target */ = {
+		C100000000000000000000C1 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -26,14 +26,7 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		A600000000000000000000A6 /* Tood */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				C100000000000000000000C1 /* Exceptions for "Tood" folder in "Tood" target */,
-			);
-			path = Tood;
-			sourceTree = "<group>";
-		};
+		A600000000000000000000A6 /* Tood */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (C100000000000000000000C1 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Tood; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -116,12 +109,11 @@
 				Base,
 			);
 			mainGroup = A300000000000000000000A3;
+			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				D100000000000000000000D1 /* XCRemoteSwiftPackageReference "Sparkle" */,
 				E100000000000000000000E1 /* XCLocalSwiftPackageReference "Packages/TootShared" */,
 			);
-			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
 			productRefGroup = A400000000000000000000A4 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -228,6 +220,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 8;
+				DEVELOPMENT_TEAM = 9MGTCHALWF;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -253,6 +246,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 8;
+				DEVELOPMENT_TEAM = 9MGTCHALWF;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -292,6 +286,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		E100000000000000000000E1 /* XCLocalSwiftPackageReference "Packages/TootShared" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/TootShared;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		D100000000000000000000D1 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -309,16 +310,6 @@
 			package = D100000000000000000000D1 /* XCRemoteSwiftPackageReference "Sparkle" */;
 			productName = Sparkle;
 		};
-/* End XCSwiftPackageProductDependency section */
-
-/* Begin XCLocalSwiftPackageReference section */
-		E100000000000000000000E1 /* XCLocalSwiftPackageReference "Packages/TootShared" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = Packages/TootShared;
-		};
-/* End XCLocalSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
 		E200000000000000000000E2 /* TootShared */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = TootShared;

@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import TootShared
 
 /// Owns one sticky: its window, its SwiftUI content, and the wiring that keeps
 /// the model's frame in sync and persists changes.
@@ -30,8 +31,9 @@ final class StickyController: NSObject, NSWindowDelegate {
         // Persist on any model mutation (debounced by the manager), and
         // re-check whether the content now needs a taller window. Deferred a
         // tick so SwiftUI has actually re-laid-out the new content first.
-        model.onChange = { [weak self, weak manager] in
+        model.onChange = { [weak self, weak manager, id = model.id] in
             manager?.scheduleSave()
+            CloudSyncService.shared.save(id: id, collection: .sticky)
             DispatchQueue.main.async { self?.growToFitCurrentContent() }
         }
 

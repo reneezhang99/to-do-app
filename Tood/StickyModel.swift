@@ -18,6 +18,10 @@ final class StickyModel: Identifiable {
     var fontID: StickyFont
     var frame: CGRect
     var isVisible: Bool
+    /// Bumped by `notifyChanged()`, whatever `onChange?()` used to be called
+    /// directly — iCloud sync's last-write-wins conflict resolution needs
+    /// this to actually track edits, not just exist as a stored field.
+    var updatedAt: Date
 
     /// Called on any change that should be persisted (routed to the manager).
     @ObservationIgnored var onChange: (() -> Void)?
@@ -51,6 +55,7 @@ final class StickyModel: Identifiable {
         self.fontID = data.fontID
         self.frame = data.frame
         self.isVisible = data.isVisible
+        self.updatedAt = data.updatedAt
 
         // Merge a split-out icon straight back into the title, exactly as
         // if it had never left — see the `emoji` doc comment on StickyData.
@@ -66,7 +71,16 @@ final class StickyModel: Identifiable {
 
     func snapshot() -> StickyData {
         StickyData(id: id, title: title, emoji: nil, day: day, items: items,
-                   colorID: colorID, fontID: fontID, frame: frame, isVisible: isVisible)
+                   colorID: colorID, fontID: fontID, frame: frame, isVisible: isVisible,
+                   updatedAt: updatedAt)
+    }
+
+    /// What every mutation below calls instead of `onChange?()` directly —
+    /// keeps `updatedAt` actually meaning "last edited" for iCloud sync's
+    /// conflict resolution, not just a field that exists but never moves.
+    private func notifyChanged() {
+        updatedAt = Date()
+        onChange?()
     }
 
     // MARK: - Ordering
@@ -86,14 +100,14 @@ final class StickyModel: Identifiable {
         } else {
             items.append(new)
         }
-        onChange?()
+        notifyChanged()
         return new.id
     }
 
     func setText(_ id: UUID, _ text: String) {
         guard let idx = items.firstIndex(where: { $0.id == id }) else { return }
         items[idx].text = text
-        onChange?()
+        notifyChanged()
     }
 
     /// Splits a multi-line paste into one item per line. If the target row
@@ -116,7 +130,7 @@ final class StickyModel: Identifiable {
             insertAt += 1
             lastID = newItem.id
         }
-        onChange?()
+        notifyChanged()
         return lastID ?? targetID
     }
 
@@ -124,18 +138,18 @@ final class StickyModel: Identifiable {
         guard let idx = items.firstIndex(where: { $0.id == id }) else { return }
         items[idx].isDone.toggle()
         items[idx].completedAt = items[idx].isDone ? Date() : nil
-        onChange?()
+        notifyChanged()
     }
 
     func delete(_ id: UUID) {
         items.removeAll { $0.id == id }
-        onChange?()
+        notifyChanged()
     }
 
 
-    func setColor(_ c: StickyColor) { colorID = c; onChange?() }
-    func setFont(_ f: StickyFont) { fontID = f; onChange?() }
-    func setTitle(_ t: String) { title = t; onChange?() }
+    func setColor(_ c: StickyColor) { colorID = c; notifyChanged() }
+    func setFont(_ f: StickyFont) { fontID = f; notifyChanged() }
+    func setTitle(_ t: String) { title = t; notifyChanged() }
 
     // MARK: - Factory
 
