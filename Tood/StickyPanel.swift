@@ -1,4 +1,5 @@
 import AppKit
+import os.log
 
 /// A borderless, rounded sticky window. It sits at the normal window level so
 /// clicking another app covers it (not always-on-top), but it's available on
@@ -50,6 +51,8 @@ final class StickyPanel: NSWindow {
 
     override func sendEvent(_ event: NSEvent) {
         if event.type == .leftMouseDown, let zone = resizeZone(at: event.locationInWindow) {
+            os_log("RESIZE-DEBUG mouseDown at %{public}@ zone=%{public}@ frame=%{public}@",
+                   NSStringFromPoint(event.locationInWindow), "\(zone.rawValue)", NSStringFromRect(frame))
             performResize(zone: zone)
             return // consume — don't let it start a background drag or hit a control
         }
@@ -70,6 +73,14 @@ final class StickyPanel: NSWindow {
     private func performResize(zone: Zone) {
         let startFrame = frame
         let startMouse = NSEvent.mouseLocation
+        // A ceiling to match the existing floor (`resizeMin`) — without
+        // one, dragging an edge out on a small display (no problem on a
+        // big external monitor, where there's slack to spare) can walk
+        // that edge straight past the screen's own bounds. Past that point
+        // there's no pixel left to click to drag it back: the edge is
+        // still logically "there," just physically unreachable. Bug
+        // report: could grow but never shrink back down again.
+        let maxSize = (screen ?? NSScreen.main)?.visibleFrame.size ?? NSSize(width: 10_000, height: 10_000)
         while let e = nextEvent(matching: [.leftMouseUp, .leftMouseDragged]) {
             if e.type == .leftMouseUp { break }
             let cur = NSEvent.mouseLocation
@@ -78,22 +89,29 @@ final class StickyPanel: NSWindow {
             var f = startFrame
 
             if zone.contains(.right) {
-                f.size.width = max(resizeMin.width, startFrame.width + dx)
+                f.size.width = min(maxSize.width, max(resizeMin.width, startFrame.width + dx))
             }
             if zone.contains(.left) {
-                let newW = max(resizeMin.width, startFrame.width - dx)
+                let newW = min(maxSize.width, max(resizeMin.width, startFrame.width - dx))
                 f.origin.x = startFrame.maxX - newW
                 f.size.width = newW
             }
+            if zone.contains(.left) || zone.contains(.right) {
+                os_log("RESIZE-DEBUG dragged dx=%{public}f startW=%{public}f newW=%{public}f",
+                       dx, startFrame.width, f.size.width)
+            }
             if zone.contains(.top) {
-                f.size.height = max(resizeMin.height, startFrame.height + dy)
+                f.size.height = min(maxSize.height, max(resizeMin.height, startFrame.height + dy))
             }
             if zone.contains(.bottom) {
-                let newH = max(resizeMin.height, startFrame.height - dy)
+                let newH = min(maxSize.height, max(resizeMin.height, startFrame.height - dy))
                 f.origin.y = startFrame.maxY - newH
                 f.size.height = newH
             }
             setFrame(f, display: true)
+            if zone.contains(.left) || zone.contains(.right) {
+                os_log("RESIZE-DEBUG after setFrame actualW=%{public}f", frame.width)
+            }
         }
     }
 }

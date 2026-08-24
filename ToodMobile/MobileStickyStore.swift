@@ -37,6 +37,9 @@ final class MobileStickyStore {
         encoder.outputFormatting = [.prettyPrinted]
         guard let data = try? encoder.encode(stickies) else { return }
         try? data.write(to: fileURL, options: .atomic)
+        // Keeps the Home Screen widget's App Group copy in lockstep with
+        // every local edit, remote sync, and reorder — not just at launch.
+        WidgetSnapshotStore.write(stickies)
     }
 
     /// Pulls whatever's changed on another device — called on launch and
@@ -49,17 +52,41 @@ final class MobileStickyStore {
 
     // MARK: - Mutations
 
-    func newSticky() {
+    @discardableResult
+    func newSticky() -> UUID {
         let sticky = StickyData(
             id: UUID(), title: "To Do", day: Date(),
             items: [TodoItem()], colorID: .nextNewStickyColor(), fontID: .defaultFont,
             frame: .zero, isVisible: true)
         stickies.insert(sticky, at: 0)
         commit(sticky.id)
+        return sticky.id
+    }
+
+    /// Local-only reordering of the home stack — mirrors the Mac's `order`
+    /// array (also local, also not part of the synced `StickyData` fields):
+    /// which sticky is "on top" isn't something that needs to agree across
+    /// devices, just persist on this one.
+    func moveSticky(from: Int, to: Int) {
+        guard stickies.indices.contains(from) else { return }
+        let item = stickies.remove(at: from)
+        stickies.insert(item, at: min(max(to, 0), stickies.count))
+        persist()
     }
 
     func setTitle(_ id: UUID, _ title: String) {
         mutate(id) { $0.title = title }
+    }
+
+    /// Free colors only — mirrors the Mac's `colorSwatchButton`, but mobile
+    /// has no `ColorPackStore`/purchase flow yet, so paid Candy Pack colors
+    /// aren't offered here even though `StickyColor` itself has the cases.
+    func setColor(_ id: UUID, _ color: StickyColor) {
+        mutate(id) { $0.colorID = color }
+    }
+
+    func setFont(_ id: UUID, _ font: StickyFont) {
+        mutate(id) { $0.fontID = font }
     }
 
     func setItemText(_ id: UUID, _ itemID: UUID, _ text: String) {
@@ -83,6 +110,17 @@ final class MobileStickyStore {
 
     func deleteItem(_ id: UUID, _ itemID: UUID) {
         mutate(id) { $0.items.removeAll { $0.id == itemID } }
+    }
+
+    /// Removes a whole sticky — the mobile equivalent of the Mac's
+    /// `StickyManager.remove(_:)`. No archive option here (unlike the Mac):
+    /// mobile has no archive-browsing UI yet, so offering it would just be
+    /// a dead end.
+    func deleteSticky(_ id: UUID) {
+        stickies.removeAll { $0.id == id }
+        persist()
+        CloudSyncService.shared.delete(id: id, collection: .sticky)
+        Task { await CloudSyncService.shared.pushLocalChanges() }
     }
 
     /// Every edit above funnels through here — updates `updatedAt` (so the
@@ -111,14 +149,24 @@ extension MobileStickyStore: SyncCollectionSource {
     }
 
     func applyRemoteChanges(_ records: [CKRecord]) {
+        // Genuinely new stickies (not ones already here getting updated) go
+        // to the top, oldest-of-the-batch first — so if several arrive in
+        // one fetch, the most recently created ends up truly on top rather
+        // than wherever CloudKit's fetch order happened to put it. Existing
+        // stickies keep their current position when merely updated, so this
+        // never fights a manual drag-reorder.
+        var newlyArrived: [StickyData] = []
         for record in records {
             guard let data = StickyData.from(record) else { continue }
             if let idx = stickies.firstIndex(where: { $0.id == data.id }) {
                 guard data.updatedAt > stickies[idx].updatedAt else { continue }
                 stickies[idx] = data
             } else {
-                stickies.append(data)
+                newlyArrived.append(data)
             }
+        }
+        for data in newlyArrived.sorted(by: { $0.updatedAt < $1.updatedAt }) {
+            stickies.insert(data, at: 0)
         }
         persist()
     }

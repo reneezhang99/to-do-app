@@ -62,7 +62,7 @@ struct MobileStickyCardView: View {
             }
             .padding(.top, 2)
             Text(item.text)
-                .font(.system(size: 15))
+                .font(data.fontID.body(15))
                 .foregroundStyle(item.isDone ? color.inkSecondary : color.ink.opacity(0.85))
                 .strikethrough(item.isDone, color: color.inkSecondary)
                 .lineLimit(2)

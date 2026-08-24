@@ -7,9 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		9BB19A29AE05D0D9EABB8AC7 /* TootShared in Frameworks */ = {isa = PBXBuildFile; productRef = 160BEA372B2A1E2685818EF1 /* TootShared */; };
 		D300000000000000000000D3 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = D200000000000000000000D2 /* Sparkle */; };
 		E300000000000000000000E3 /* TootShared in Frameworks */ = {isa = PBXBuildFile; productRef = E200000000000000000000E2 /* TootShared */; };
 		E400000000000000000000E4 /* TootShared in Frameworks */ = {isa = PBXBuildFile; productRef = E200000000000000000000E2 /* TootShared */; };
+		E7FC4C52302FFE160078AE8F /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E7FC4C51302FFE160078AE8F /* WidgetKit.framework */; };
+		E7FC4C54302FFE160078AE8F /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E7FC4C53302FFE160078AE8F /* SwiftUI.framework */; };
+		E7FC4C65302FFE170078AE8F /* TootWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E7FC4C4F302FFE160078AE8F /* TootWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -27,30 +31,114 @@
 			remoteGlobalIDString = E73668B3302EE4B4005B383D;
 			remoteInfo = ToodMobile;
 		};
+		E7FC4C63302FFE170078AE8F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A100000000000000000000A1 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E7FC4C4E302FFE160078AE8F;
+			remoteInfo = TootWidgetExtension;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		E7FC4C66302FFE170078AE8F /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				E7FC4C65302FFE170078AE8F /* TootWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		A500000000000000000000A5 /* Tood.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tood.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E73668B4302EE4B4005B383D /* ToodMobile.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ToodMobile.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E73668C0302EE4B6005B383D /* ToodMobileTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ToodMobileTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E73668CA302EE4B6005B383D /* ToodMobileUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ToodMobileUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		E7FC4C4F302FFE160078AE8F /* TootWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TootWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E7FC4C51302FFE160078AE8F /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		E7FC4C53302FFE160078AE8F /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		C100000000000000000000C1 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+		C100000000000000000000C1 /* Exceptions for "Tood" folder in "Tood" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
 			target = A200000000000000000000A2 /* Tood */;
 		};
+		E7FC4C69302FFE170078AE8F /* Exceptions for "TootWidget" folder in "TootWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = E7FC4C4E302FFE160078AE8F /* TootWidgetExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		A600000000000000000000A6 /* Tood */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (C100000000000000000000C1 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Tood; sourceTree = "<group>"; };
-		E73668B5302EE4B4005B383D /* ToodMobile */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = ToodMobile; sourceTree = "<group>"; };
-		E73668C3302EE4B6005B383D /* ToodMobileTests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = ToodMobileTests; sourceTree = "<group>"; };
-		E73668CD302EE4B6005B383D /* ToodMobileUITests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = ToodMobileUITests; sourceTree = "<group>"; };
+		A600000000000000000000A6 /* Tood */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C100000000000000000000C1 /* Exceptions for "Tood" folder in "Tood" target */,
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = Tood;
+			sourceTree = "<group>";
+		};
+		E73668B5302EE4B4005B383D /* ToodMobile */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = ToodMobile;
+			sourceTree = "<group>";
+		};
+		E73668C3302EE4B6005B383D /* ToodMobileTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = ToodMobileTests;
+			sourceTree = "<group>";
+		};
+		E73668CD302EE4B6005B383D /* ToodMobileUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = ToodMobileUITests;
+			sourceTree = "<group>";
+		};
+		E7FC4C55302FFE160078AE8F /* TootWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				E7FC4C69302FFE170078AE8F /* Exceptions for "TootWidget" folder in "TootWidgetExtension" target */,
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = TootWidget;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -85,6 +173,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E7FC4C4C302FFE160078AE8F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E7FC4C54302FFE160078AE8F /* SwiftUI.framework in Frameworks */,
+				E7FC4C52302FFE160078AE8F /* WidgetKit.framework in Frameworks */,
+				9BB19A29AE05D0D9EABB8AC7 /* TootShared in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -95,6 +193,8 @@
 				E73668B5302EE4B4005B383D /* ToodMobile */,
 				E73668C3302EE4B6005B383D /* ToodMobileTests */,
 				E73668CD302EE4B6005B383D /* ToodMobileUITests */,
+				E7FC4C55302FFE160078AE8F /* TootWidget */,
+				E7FC4C50302FFE160078AE8F /* Frameworks */,
 				A400000000000000000000A4 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -106,8 +206,18 @@
 				E73668B4302EE4B4005B383D /* ToodMobile.app */,
 				E73668C0302EE4B6005B383D /* ToodMobileTests.xctest */,
 				E73668CA302EE4B6005B383D /* ToodMobileUITests.xctest */,
+				E7FC4C4F302FFE160078AE8F /* TootWidgetExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		E7FC4C50302FFE160078AE8F /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				E7FC4C51302FFE160078AE8F /* WidgetKit.framework */,
+				E7FC4C53302FFE160078AE8F /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -144,10 +254,12 @@
 				E73668B0302EE4B4005B383D /* Sources */,
 				E73668B1302EE4B4005B383D /* Frameworks */,
 				E73668B2302EE4B4005B383D /* Resources */,
+				E7FC4C66302FFE170078AE8F /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				E7FC4C64302FFE170078AE8F /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				E73668B5302EE4B4005B383D /* ToodMobile */,
@@ -177,8 +289,6 @@
 				E73668C3302EE4B6005B383D /* ToodMobileTests */,
 			);
 			name = ToodMobileTests;
-			packageProductDependencies = (
-			);
 			productName = ToodMobileTests;
 			productReference = E73668C0302EE4B6005B383D /* ToodMobileTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -200,11 +310,32 @@
 				E73668CD302EE4B6005B383D /* ToodMobileUITests */,
 			);
 			name = ToodMobileUITests;
-			packageProductDependencies = (
-			);
 			productName = ToodMobileUITests;
 			productReference = E73668CA302EE4B6005B383D /* ToodMobileUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		E7FC4C4E302FFE160078AE8F /* TootWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E7FC4C6A302FFE170078AE8F /* Build configuration list for PBXNativeTarget "TootWidgetExtension" */;
+			buildPhases = (
+				E7FC4C4B302FFE160078AE8F /* Sources */,
+				E7FC4C4C302FFE160078AE8F /* Frameworks */,
+				E7FC4C4D302FFE160078AE8F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				E7FC4C55302FFE160078AE8F /* TootWidget */,
+			);
+			name = TootWidgetExtension;
+			packageProductDependencies = (
+				160BEA372B2A1E2685818EF1 /* TootShared */,
+			);
+			productName = TootWidgetExtension;
+			productReference = E7FC4C4F302FFE160078AE8F /* TootWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -230,6 +361,9 @@
 						CreatedOnToolsVersion = 26.6;
 						TestTargetID = E73668B3302EE4B4005B383D;
 					};
+					E7FC4C4E302FFE160078AE8F = {
+						CreatedOnToolsVersion = 26.6;
+					};
 				};
 			};
 			buildConfigurationList = B100000000000000000000B1 /* Build configuration list for PBXProject "Tood" */;
@@ -244,7 +378,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				D100000000000000000000D1 /* XCRemoteSwiftPackageReference "Sparkle" */,
-				E100000000000000000000E1 /* XCLocalSwiftPackageReference "Packages/TootShared" */,
+				E100000000000000000000E1 /* XCLocalSwiftPackageReference "TootShared" */,
 			);
 			productRefGroup = A400000000000000000000A4 /* Products */;
 			projectDirPath = "";
@@ -254,6 +388,7 @@
 				E73668B3302EE4B4005B383D /* ToodMobile */,
 				E73668BF302EE4B6005B383D /* ToodMobileTests */,
 				E73668C9302EE4B6005B383D /* ToodMobileUITests */,
+				E7FC4C4E302FFE160078AE8F /* TootWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -281,6 +416,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		E73668C8302EE4B6005B383D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E7FC4C4D302FFE160078AE8F /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -318,6 +460,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E7FC4C4B302FFE160078AE8F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -330,6 +479,11 @@
 			isa = PBXTargetDependency;
 			target = E73668B3302EE4B4005B383D /* ToodMobile */;
 			targetProxy = E73668CB302EE4B6005B383D /* PBXContainerItemProxy */;
+		};
+		E7FC4C64302FFE170078AE8F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E7FC4C4E302FFE160078AE8F /* TootWidgetExtension */;
+			targetProxy = E7FC4C63302FFE170078AE8F /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -479,8 +633,9 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_ENTITLEMENTS = ToodMobile/ToodMobile.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 9MGTCHALWF;
 				ENABLE_PREVIEWS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -502,8 +657,9 @@
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.renee.ToodMobile;
+				PRODUCT_BUNDLE_IDENTIFIER = com.renee.TootApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -541,8 +697,9 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_ENTITLEMENTS = ToodMobile/ToodMobile.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 9MGTCHALWF;
 				ENABLE_PREVIEWS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -564,8 +721,9 @@
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.renee.ToodMobile;
+				PRODUCT_BUNDLE_IDENTIFIER = com.renee.TootApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -774,6 +932,127 @@
 			};
 			name = Release;
 		};
+		E7FC4C67302FFE170078AE8F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_ENTITLEMENTS = TootWidget/TootWidget.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = 9MGTCHALWF;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TootWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = TootWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.renee.TootApp.TootWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		E7FC4C68302FFE170078AE8F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_ENTITLEMENTS = TootWidget/TootWidget.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = 9MGTCHALWF;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TootWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = TootWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.renee.TootApp.TootWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -822,10 +1101,19 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		E7FC4C6A302FFE170078AE8F /* Build configuration list for PBXNativeTarget "TootWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E7FC4C67302FFE170078AE8F /* Debug */,
+				E7FC4C68302FFE170078AE8F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		E100000000000000000000E1 /* XCLocalSwiftPackageReference "Packages/TootShared" */ = {
+		E100000000000000000000E1 /* XCLocalSwiftPackageReference "TootShared" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/TootShared;
 		};
@@ -843,6 +1131,10 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		160BEA372B2A1E2685818EF1 /* TootShared */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TootShared;
+		};
 		D200000000000000000000D2 /* Sparkle */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = D100000000000000000000D1 /* XCRemoteSwiftPackageReference "Sparkle" */;

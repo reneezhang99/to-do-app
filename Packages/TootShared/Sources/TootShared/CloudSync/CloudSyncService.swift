@@ -1,5 +1,6 @@
 import CloudKit
 import Foundation
+import Observation
 
 /// Mirrors Tood's four local stores (stickies, archived stickies, archived
 /// items, journal entries) to the user's private iCloud database via
@@ -23,6 +24,7 @@ import Foundation
 /// baseline round-trip is proven solid.
 @available(macOS 14.0, iOS 17.0, *)
 @MainActor
+@Observable
 public final class CloudSyncService: NSObject {
     public static let containerIdentifier = "iCloud.com.renee.Today"
     public static let shared = CloudSyncService()
@@ -36,7 +38,13 @@ public final class CloudSyncService: NSObject {
 
     /// True once CloudKit has confirmed the account is signed in and
     /// available — lets the app show a quiet "iCloud sync is off" hint
-    /// instead of silently doing nothing.
+    /// instead of silently doing nothing. `@Observable` so a SwiftUI view
+    /// can just read this and react.
+    ///
+    /// Starts optimistic (`true`) rather than `nil`/unknown, since most
+    /// users are signed in and a flash of "not signed in" while the real
+    /// check below is still in flight would be worse than briefly assuming
+    /// the common case.
     public private(set) var accountAvailable = true
 
     private override init() {
@@ -52,6 +60,17 @@ public final class CloudSyncService: NSObject {
         // actually exists, so it's safe to queue unconditionally every
         // launch rather than tracking "have I done this before" ourselves.
         syncEngine.state.add(pendingDatabaseChanges: [.saveZone(CKRecordZone(zoneID: zoneID))])
+        // `accountAvailable` is otherwise only ever updated by a *change*
+        // event (see `.accountChange` below) — which never fires if the
+        // account was already signed out before this app launch, e.g. a
+        // fresh device or a first-time install with iCloud off. Checking
+        // the actual current status here is what catches that case.
+        Task { await self.refreshAccountStatus() }
+    }
+
+    private func refreshAccountStatus() async {
+        let status = (try? await container.accountStatus()) ?? .couldNotDetermine
+        accountAvailable = (status == .available)
     }
 
     /// Registers the local store backing one collection. Call once per
