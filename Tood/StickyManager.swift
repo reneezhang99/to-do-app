@@ -89,6 +89,54 @@ final class StickyManager {
         remove(id)
     }
 
+    /// Newest first — same ordering the old archive sheet reloaded with,
+    /// kept here so both the Home dashboard's inline archived fan and any
+    /// future consumer agree on it without re-deriving it themselves.
+    var archivedStickies: [ArchivedSticky] {
+        stickyArchive.load().sorted { $0.archivedAt > $1.archivedAt }
+    }
+
+    /// Un-archives a memory back into a real, live sticky — the inverse of
+    /// `archive(_:)`. Reappears hidden at a fresh cascade position (an
+    /// archived sticky's saved frame is stale, possibly off whatever screen
+    /// is connected now) rather than popping back exactly where it closed;
+    /// the caller (Home's archived fan) brings it to front itself right
+    /// after, which shows and focuses it same as opening any other sticky.
+    func restoreArchived(_ entry: ArchivedSticky) {
+        var data = entry.data
+        let origin = cascadeOrigin()
+        data.frame = CGRect(x: origin.x, y: origin.y, width: data.frame.width, height: data.frame.height)
+        data.isVisible = false
+        data.updatedAt = Date()
+        let model = StickyModel(data: data)
+        addController(for: model)
+        stickyArchive.delete(entry.id)
+        CloudSyncService.shared.delete(id: entry.id, collection: .archivedSticky)
+        CloudSyncService.shared.save(id: model.id, collection: .sticky)
+        scheduleSave()
+        controllers[model.id]?.bringToFront()
+        noteActive(model.id)
+    }
+
+    /// Removes an archived sticky for good — the inline archived fan's own
+    /// "Delete Permanently" action, mirrored from the old archive sheet.
+    func deleteArchived(_ id: UUID) {
+        stickyArchive.delete(id)
+        CloudSyncService.shared.delete(id: id, collection: .archivedSticky)
+    }
+
+    /// Reorders the live sticky fan by moving `id` to sit at `index`. Used by
+    /// Home's drag-to-reorder; a no-op if `id` isn't currently open.
+    func moveSticky(_ id: UUID, to index: Int) {
+        guard let from = order.firstIndex(of: id) else { return }
+        var updated = order
+        updated.remove(at: from)
+        let clamped = min(max(0, index), updated.count)
+        updated.insert(id, at: clamped)
+        order = updated
+        scheduleSave()
+    }
+
     func showAll() { for c in controllers.values { c.show() } }
     func hideAll() { for c in controllers.values { c.hide() } }
 
@@ -101,6 +149,20 @@ final class StickyManager {
     func bringToFront(_ id: UUID) {
         controllers[id]?.bringToFront()
         noteActive(id)
+    }
+
+    /// Focuses one of the first ten stickies in the same order the status
+    /// menu lists them. Returns false when that numbered slot is empty so an
+    /// otherwise unrelated Control-number keystroke can continue normally.
+    @discardableResult
+    func focusSticky(atShortcutIndex index: Int) -> Bool {
+        guard (0..<StickySelectionShortcut.maximumStickyCount).contains(index),
+              order.indices.contains(index),
+              let controller = controllers[order[index]]
+        else { return false }
+        controller.focusForTyping()
+        noteActive(controller.model.id)
+        return true
     }
 
     /// Called by `StickyController` (bringToFront, or the window becoming

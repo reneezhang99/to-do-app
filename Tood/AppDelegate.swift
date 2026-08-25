@@ -22,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var reportBugWindow: HostedWindowController<ReportBugView>?
 
     private var cloudPullTimer: Timer?
+    private var applicationShortcutMonitor: Any?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Regular app: Dock icon visible, matches LSUIElement=false in
@@ -55,6 +56,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         GlobalHotKeyManager.shared.reregister()
         AnnouncementService.shared.checkForAnnouncement()
+
+        // App-local, not a true system-wide hotkey (unlike the two above,
+        // registered via GlobalHotKeyManager) — Control-1…0 only makes sense
+        // while Tood already has focus, jumping between stickies that are
+        // already open, so it doesn't need Accessibility/Input Monitoring
+        // permission or risk colliding with another app's shortcuts.
+        applicationShortcutMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self, AppSettings.shared.onboardingCompleted else { return event }
+            guard event.modifierFlags.intersection([.command, .shift, .control, .option]) == [.control],
+                  let key = event.charactersIgnoringModifiers?.lowercased(),
+                  let index = StickySelectionShortcut.stickyIndex(forKeyEquivalent: key),
+                  self.manager.focusSticky(atShortcutIndex: index)
+            else { return event }
+            return nil
+        }
 
         if !AppSettings.shared.onboardingCompleted {
             // Don't let real floating stickies (a true first run's
