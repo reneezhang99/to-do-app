@@ -6,10 +6,10 @@
     <description>Automatic updates for Tood.</description>
     <language>en</language>
     <item>
-      <title>Version 1.8.0</title>
-      <pubDate>Tue, 25 Aug 2026 07:57:41 +0000</pubDate>
-      <sparkle:version>9</sparkle:version>
-      <sparkle:shortVersionString>1.8.0</sparkle:shortVersionString>
+      <title>Version 1.8.1</title>
+      <pubDate>Tue, 25 Aug 2026 18:15:00 +0000</pubDate>
+      <sparkle:version>10</sparkle:version>
+      <sparkle:shortVersionString>1.8.1</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <description><![CDATA[
         <ul>
@@ -20,12 +20,13 @@
           <li>Archived stickies now browse right on the Home screen instead of a separate window — click to restore, right-click to delete for good</li>
           <li>Drag and drop to reorder your stickies on Home</li>
           <li>Stickies can now sync across your devices via iCloud</li>
+          <li>Fixed automatic updates themselves failing with "An error occurred while launching the installer" for some users</li>
         </ul>
       ]]></description>
       <enclosure
-        url="https://github.com/reneezhang99/to-do-app/releases/download/v1.8.0/Tood.dmg"
-        sparkle:edSignature="NHH0wWLqWrJ++1UoVYqkNXHwWfNHvcxYaI7XXgkyUQGB3cyUD30fbBW08WS7P2nQcZeL8t2JgJ05tNQJl66xBg=="
-        length="3524431"
+        url="https://github.com/reneezhang99/to-do-app/releases/download/v1.8.1/Tood.dmg"
+        sparkle:edSignature="/9h4zZ2kQhu+hSyyEcNqF2QLascATllk+xjCr+/CvCvvMVIEwDwjkAiDv45Nx3tUgYPMR2r/gATcDn4/ZFtdDQ=="
+        length="3524089"
         type="application/octet-stream" />
     </item>
     <item>
