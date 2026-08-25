@@ -6,6 +6,29 @@
     <description>Automatic updates for Tood.</description>
     <language>en</language>
     <item>
+      <title>Version 1.8.0</title>
+      <pubDate>Tue, 25 Aug 2026 07:57:41 +0000</pubDate>
+      <sparkle:version>9</sparkle:version>
+      <sparkle:shortVersionString>1.8.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <ul>
+          <li>Fixed sticky windows sometimes not shrinking back down after being resized wider</li>
+          <li>Control+1…0 jumps straight to any of your first ten stickies</li>
+          <li>Checklists edit more like a real text editor: split/merge lines with Return/Backspace, arrow keys move between the title and items</li>
+          <li>Checking off an item now has a small animation, plus ⌘Z/⌘⇧Z to undo/redo completions</li>
+          <li>Archived stickies now browse right on the Home screen instead of a separate window — click to restore, right-click to delete for good</li>
+          <li>Drag and drop to reorder your stickies on Home</li>
+          <li>Stickies can now sync across your devices via iCloud</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/reneezhang99/to-do-app/releases/download/v1.8.0/Tood.dmg"
+        sparkle:edSignature="NHH0wWLqWrJ++1UoVYqkNXHwWfNHvcxYaI7XXgkyUQGB3cyUD30fbBW08WS7P2nQcZeL8t2JgJ05tNQJl66xBg=="
+        length="3524431"
+        type="application/octet-stream" />
+    </item>
+    <item>
       <title>Version 1.7.0</title>
       <pubDate>Thu, 13 Aug 2026 11:15:00 +0000</pubDate>
       <sparkle:version>8</sparkle:version>
