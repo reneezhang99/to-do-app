@@ -1,4 +1,5 @@
 import Foundation
+import TootShared
 import Observation
 
 /// Settings not already owned by `StickyColor`/`StickyFont`/`StickyCorner`
@@ -63,6 +64,16 @@ final class AppSettings {
         didSet { UserDefaults.standard.set(closeBehavior.rawValue, forKey: Keys.closeBehavior) }
     }
 
+    /// The checkbox particle burst + staged strikethrough reveal when
+    /// completing a to-do. On by default; off falls back to an instant
+    /// strikethrough with no burst — `accessibilityReduceMotion` already
+    /// covers the system-wide "less motion" preference, this is a separate,
+    /// explicit opt-out for people who just don't want the effect at all
+    /// regardless of their system setting.
+    var completionAnimationsEnabled: Bool {
+        didSet { UserDefaults.standard.set(completionAnimationsEnabled, forKey: Keys.completionAnimationsEnabled) }
+    }
+
     private init() {
         let d = UserDefaults.standard
         onboardingCompleted = d.bool(forKey: Keys.onboardingCompleted)
@@ -74,6 +85,7 @@ final class AppSettings {
         userName = d.string(forKey: Keys.userName) ?? ""
         titleSize = d.string(forKey: Keys.titleSize).flatMap(StickyTitleSize.init(rawValue:)) ?? .medium
         closeBehavior = d.string(forKey: Keys.closeBehavior).flatMap(StickyCloseBehavior.init(rawValue:)) ?? .alwaysAsk
+        completionAnimationsEnabled = d.object(forKey: Keys.completionAnimationsEnabled) as? Bool ?? true
     }
 
     private enum Keys {
@@ -86,5 +98,6 @@ final class AppSettings {
         static let userName = "today.userName"
         static let titleSize = "today.titleSize"
         static let closeBehavior = "today.closeBehavior"
+        static let completionAnimationsEnabled = "today.completionAnimationsEnabled"
     }
 }

@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 import CoreText
 import Sparkle
+import TootShared
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -19,6 +20,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var onboardingWindow: HostedWindowController<OnboardingView>?
     private var introWindow: HostedWindowController<IntroFallView>?
     private var reportBugWindow: HostedWindowController<ReportBugView>?
+
+    private var cloudPullTimer: Timer?
+    private var applicationShortcutMonitor: Any?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Regular app: Dock icon visible, matches LSUIElement=false in
@@ -43,6 +47,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
         statusMenu = StatusMenuController(manager: manager, appDelegate: self)
         manager.restoreAll()
+        setUpCloudSync()
 
         GlobalHotKeyManager.shared.onShowSticky = { [weak self] in self?.manager.showActiveSticky() }
         GlobalHotKeyManager.shared.onNewSticky = { [weak self] in
@@ -51,6 +56,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         GlobalHotKeyManager.shared.reregister()
         AnnouncementService.shared.checkForAnnouncement()
+
+        // App-local, not a true system-wide hotkey (unlike the two above,
+        // registered via GlobalHotKeyManager) — Control-1…0 only makes sense
+        // while Tood already has focus, jumping between stickies that are
+        // already open, so it doesn't need Accessibility/Input Monitoring
+        // permission or risk colliding with another app's shortcuts.
+        applicationShortcutMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self, AppSettings.shared.onboardingCompleted else { return event }
+            guard event.modifierFlags.intersection([.command, .shift, .control, .option]) == [.control],
+                  let key = event.charactersIgnoringModifiers?.lowercased(),
+                  let index = StickySelectionShortcut.stickyIndex(forKeyEquivalent: key),
+                  self.manager.focusSticky(atShortcutIndex: index)
+            else { return event }
+            return nil
+        }
 
         if !AppSettings.shared.onboardingCompleted {
             // Don't let real floating stickies (a true first run's
@@ -82,6 +102,64 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         manager.saveNow()
+    }
+
+    // Foregrounding is the closest thing to a "the user is here, might as
+    // well check" signal available without the aps-environment push
+    // entitlement (see CloudSyncService's doc comment) — this plus the
+    // periodic timer are what stand in for it for now.
+    func applicationDidBecomeActive(_ notification: Notification) {
+        Task { await CloudSyncService.shared.pullRemoteChanges() }
+    }
+
+    // MARK: - iCloud sync
+
+    /// Registers each local store with `CloudSyncService`, backfills
+    /// anything created before this feature shipped, and starts a
+    /// lightweight periodic pull. No push notifications yet, so this and
+    /// `applicationDidBecomeActive` are what keep a second device's changes
+    /// from sitting unnoticed indefinitely.
+    private func setUpCloudSync() {
+        CloudSyncService.shared.register(manager, for: .sticky)
+        CloudSyncService.shared.register(journal, for: .journalEntry)
+        CloudSyncService.shared.register(ArchivedStickySyncAdapter(service: manager.stickyArchive), for: .archivedSticky)
+        CloudSyncService.shared.register(ArchivedItemSyncAdapter(service: manager.archive), for: .archivedItem)
+
+        performInitialCloudBackfillIfNeeded()
+
+        Task { await CloudSyncService.shared.pullRemoteChanges() }
+
+        cloudPullTimer = Timer.scheduledTimer(withTimeInterval: 90, repeats: true) { _ in
+            Task { @MainActor in await CloudSyncService.shared.pullRemoteChanges() }
+        }
+    }
+
+    /// The first time this ships, nothing existing has ever been queued for
+    /// upload — everything from here on gets queued the moment it changes
+    /// (see each store's own `CloudSyncService.shared.save(...)` calls), but
+    /// that never fires for a sticky that was created weeks ago and hasn't
+    /// been touched since. One-time queue of everything already on disk
+    /// closes that gap; the UserDefaults flag means it only ever runs once
+    /// per device, not on every launch.
+    private func performInitialCloudBackfillIfNeeded() {
+        let key = "today.cloudSyncDidBackfill"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+
+        for sticky in manager.stickyList() {
+            CloudSyncService.shared.save(id: sticky.id, collection: .sticky)
+        }
+        for entry in journal.entries {
+            CloudSyncService.shared.save(id: entry.id, collection: .journalEntry)
+        }
+        for archived in manager.stickyArchive.load() {
+            CloudSyncService.shared.save(id: archived.id, collection: .archivedSticky)
+        }
+        for item in manager.archive.load() {
+            CloudSyncService.shared.save(id: item.id, collection: .archivedItem)
+        }
+
+        UserDefaults.standard.set(true, forKey: key)
+        Task { await CloudSyncService.shared.pushLocalChanges() }
     }
 
     // MARK: - Windows

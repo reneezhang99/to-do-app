@@ -1,5 +1,6 @@
 import SwiftUI
 import SpriteKit
+import TootShared
 
 /// First thing you see on a true first run, before the onboarding wizard:
 /// a pile of stickies tumble in and stack up on the desk (`StickyFallScene`).

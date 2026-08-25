@@ -1,4 +1,5 @@
 import AppKit
+import TootShared
 
 /// Builds and keeps the menu-bar item's menu in sync with the sticky set.
 @MainActor
@@ -41,11 +42,13 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
             let header = NSMenuItem(title: "Your Stickies", action: nil, keyEquivalent: "")
             header.isEnabled = false
             menu.addItem(header)
-            for sticky in stickies {
+            for (index, sticky) in stickies.enumerated() {
+                let shortcut = StickySelectionShortcut.keyEquivalent(forStickyIndex: index)
                 let item = NSMenuItem(title: "  \(sticky.title)",
-                                      action: #selector(focusSticky(_:)), keyEquivalent: "")
+                                      action: #selector(focusSticky(_:)), keyEquivalent: shortcut ?? "")
                 item.target = self
                 item.representedObject = sticky.id
+                if shortcut != nil { item.keyEquivalentModifierMask = [.control] }
                 menu.addItem(item)
             }
         }

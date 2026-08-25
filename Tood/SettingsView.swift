@@ -1,4 +1,5 @@
 import SwiftUI
+import TootShared
 
 /// Every persisted preference in one place — the default-color/font/position
 /// pickers reuse the exact same `StickyColor`/`StickyFont`/`StickyCorner`

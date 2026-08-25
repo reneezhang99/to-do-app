@@ -1,4 +1,5 @@
 import SwiftUI
+import TootShared
 
 /// Small sheet shown when tapping a locked pack color in any swatch picker:
 /// buy via Polar checkout in the browser, or redeem an already-purchased

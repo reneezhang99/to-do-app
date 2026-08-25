@@ -1,5 +1,7 @@
 import AppKit
+import CloudKit
 import Observation
+import TootShared
 
 /// Owns every sticky controller and the shared services. Handles restore,
 /// create, remove, show/hide, debounced saving, and the day rollover.
@@ -71,6 +73,7 @@ final class StickyManager {
         controllers[id]?.panel.close()
         controllers[id] = nil
         order.removeAll { $0 == id }
+        CloudSyncService.shared.delete(id: id, collection: .sticky)
         scheduleSave()
     }
 
@@ -80,8 +83,58 @@ final class StickyManager {
     /// decides archive vs. delete; this just also keeps a copy.
     func archive(_ id: UUID) {
         guard let model = controllers[id]?.model else { return }
-        stickyArchive.append(ArchivedSticky(id: model.id, data: model.snapshot(), archivedAt: Date()))
+        let archived = ArchivedSticky(id: model.id, data: model.snapshot(), archivedAt: Date())
+        stickyArchive.append(archived)
+        CloudSyncService.shared.save(id: archived.id, collection: .archivedSticky)
         remove(id)
+    }
+
+    /// Newest first — same ordering the old archive sheet reloaded with,
+    /// kept here so both the Home dashboard's inline archived fan and any
+    /// future consumer agree on it without re-deriving it themselves.
+    var archivedStickies: [ArchivedSticky] {
+        stickyArchive.load().sorted { $0.archivedAt > $1.archivedAt }
+    }
+
+    /// Un-archives a memory back into a real, live sticky — the inverse of
+    /// `archive(_:)`. Reappears hidden at a fresh cascade position (an
+    /// archived sticky's saved frame is stale, possibly off whatever screen
+    /// is connected now) rather than popping back exactly where it closed;
+    /// the caller (Home's archived fan) brings it to front itself right
+    /// after, which shows and focuses it same as opening any other sticky.
+    func restoreArchived(_ entry: ArchivedSticky) {
+        var data = entry.data
+        let origin = cascadeOrigin()
+        data.frame = CGRect(x: origin.x, y: origin.y, width: data.frame.width, height: data.frame.height)
+        data.isVisible = false
+        data.updatedAt = Date()
+        let model = StickyModel(data: data)
+        addController(for: model)
+        stickyArchive.delete(entry.id)
+        CloudSyncService.shared.delete(id: entry.id, collection: .archivedSticky)
+        CloudSyncService.shared.save(id: model.id, collection: .sticky)
+        scheduleSave()
+        controllers[model.id]?.bringToFront()
+        noteActive(model.id)
+    }
+
+    /// Removes an archived sticky for good — the inline archived fan's own
+    /// "Delete Permanently" action, mirrored from the old archive sheet.
+    func deleteArchived(_ id: UUID) {
+        stickyArchive.delete(id)
+        CloudSyncService.shared.delete(id: id, collection: .archivedSticky)
+    }
+
+    /// Reorders the live sticky fan by moving `id` to sit at `index`. Used by
+    /// Home's drag-to-reorder; a no-op if `id` isn't currently open.
+    func moveSticky(_ id: UUID, to index: Int) {
+        guard let from = order.firstIndex(of: id) else { return }
+        var updated = order
+        updated.remove(at: from)
+        let clamped = min(max(0, index), updated.count)
+        updated.insert(id, at: clamped)
+        order = updated
+        scheduleSave()
     }
 
     func showAll() { for c in controllers.values { c.show() } }
@@ -96,6 +149,20 @@ final class StickyManager {
     func bringToFront(_ id: UUID) {
         controllers[id]?.bringToFront()
         noteActive(id)
+    }
+
+    /// Focuses one of the first ten stickies in the same order the status
+    /// menu lists them. Returns false when that numbered slot is empty so an
+    /// otherwise unrelated Control-number keystroke can continue normally.
+    @discardableResult
+    func focusSticky(atShortcutIndex index: Int) -> Bool {
+        guard (0..<StickySelectionShortcut.maximumStickyCount).contains(index),
+              order.indices.contains(index),
+              let controller = controllers[order[index]]
+        else { return false }
+        controller.focusForTyping()
+        noteActive(controller.model.id)
+        return true
     }
 
     /// Called by `StickyController` (bringToFront, or the window becoming
@@ -201,6 +268,7 @@ final class StickyManager {
     func saveNow() {
         let snapshots = order.compactMap { controllers[$0]?.model.snapshot() }
         persistence.save(snapshots)
+        Task { await CloudSyncService.shared.pushLocalChanges() }
     }
 
     // MARK: - Rollover
@@ -221,8 +289,13 @@ final class StickyManager {
             }
             model.items.removeAll { $0.isDone }
             model.day = now
+            model.updatedAt = now
+            CloudSyncService.shared.save(id: model.id, collection: .sticky)
         }
         archive.append(archived)
+        for item in archived {
+            CloudSyncService.shared.save(id: item.id, collection: .archivedItem)
+        }
         saveNow()
     }
 
@@ -263,6 +336,51 @@ final class StickyManager {
             y = visible.minY + gutter + rowOffset
         }
         return CGPoint(x: x, y: y)
+    }
+}
+
+// MARK: - iCloud sync
+
+extension StickyManager: SyncCollectionSource {
+    func record(for id: UUID, zoneID: CKRecordZone.ID) -> CKRecord? {
+        controllers[id]?.model.snapshot().toRecord(zoneID: zoneID)
+    }
+
+    /// Folds a batch of remotely-changed stickies into the live set. An
+    /// existing local sticky only takes the remote copy if it's actually
+    /// newer (last-write-wins on `updatedAt`) — and even then, only its
+    /// content (title/items/color/font/day), never `frame`/`isVisible`,
+    /// which describe this Mac's own window and mean nothing coming from
+    /// another device. A sticky with no local match yet is a genuinely new
+    /// one from elsewhere — created here too, but hidden (no window frame
+    /// from a phone means anything on a Mac desktop) rather than popping
+    /// a window on screen unannounced.
+    func applyRemoteChanges(_ records: [CKRecord]) {
+        for record in records {
+            guard let data = StickyData.from(record) else { continue }
+            if let existing = controllers[data.id]?.model {
+                guard data.updatedAt > existing.updatedAt else { continue }
+                existing.title = data.title
+                existing.day = data.day
+                existing.items = data.items
+                existing.colorID = data.colorID
+                existing.fontID = data.fontID
+                existing.updatedAt = data.updatedAt
+            } else {
+                let origin = cascadeOrigin()
+                var seeded = data
+                seeded.frame = CGRect(x: origin.x, y: origin.y, width: 378, height: 490)
+                seeded.isVisible = false
+                addController(for: StickyModel(data: seeded))
+            }
+        }
+        scheduleSave()
+    }
+
+    func applyRemoteDeletions(_ ids: [UUID]) {
+        for id in ids where controllers[id] != nil {
+            remove(id)
+        }
     }
 }
 

@@ -1,5 +1,11 @@
 import AppKit
 import SwiftUI
+import TootShared
+
+enum StickyCaretEdge {
+    case top
+    case bottom
+}
 
 /// Owns one sticky: its window, its SwiftUI content, and the wiring that keeps
 /// the model's frame in sync and persists changes.
@@ -8,11 +14,36 @@ final class StickyController: NSObject, NSWindowDelegate {
     let model: StickyModel
     let panel: StickyPanel
     private weak var manager: StickyManager?
+    private let completionUndoManager = UndoManager()
     private var keyMonitor: Any?
     private var selectionObserver: NSObjectProtocol?
     private var deminiaturizeObserver: NSObjectProtocol?
     private var suppressNextAutoSelect = false
     private var hosting: StickyHostingView!
+
+    private enum PendingCaretPlacement {
+        case offset(Int)
+        case horizontal(screenX: CGFloat, edge: StickyCaretEdge)
+    }
+
+    private enum PendingCaretTarget: Equatable {
+        case title
+        case item(UUID)
+
+        @MainActor
+        func matches(_ model: StickyModel) -> Bool {
+            switch self {
+            case .title:
+                return model.isTitleFocused
+            case .item(let id):
+                return model.focusedItemID == id
+            }
+        }
+    }
+
+    private var pendingCaretPlacement: PendingCaretPlacement?
+    private var pendingCaretTarget: PendingCaretTarget?
+    private var pendingCaretGeneration: UUID?
 
     init(model: StickyModel, manager: StickyManager) {
         self.model = model
@@ -22,6 +53,17 @@ final class StickyController: NSObject, NSWindowDelegate {
 
         let root = StickyRootView(model: model, controller: self)
         hosting = StickyHostingView(rootView: root)
+        // The window owns both resizable dimensions; SwiftUI should only
+        // ever respond to the size AppKit gives it, never write its own
+        // computed minimum back. Without this, NSHostingView can advertise
+        // its SwiftUI content's current intrinsic size as a hard floor to
+        // AppKit's live-resize negotiation — and since the title uses a
+        // *fixed* `.frame(width:)` tied to the window's own current width
+        // (see `header` in StickyRootView), that floor silently ratchets
+        // upward every time the sticky grows, and native resize honors it
+        // over our own looser `minSize`. Symptom: grows fine, then can't
+        // shrink back below wherever it's already been.
+        hosting.sizingOptions = []
         hosting.frame = panel.contentLayoutRect
         hosting.autoresizingMask = [.width, .height]
         panel.contentView = hosting
@@ -30,8 +72,9 @@ final class StickyController: NSObject, NSWindowDelegate {
         // Persist on any model mutation (debounced by the manager), and
         // re-check whether the content now needs a taller window. Deferred a
         // tick so SwiftUI has actually re-laid-out the new content first.
-        model.onChange = { [weak self, weak manager] in
+        model.onChange = { [weak self, weak manager, id = model.id] in
             manager?.scheduleSave()
+            CloudSyncService.shared.save(id: id, collection: .sticky)
             DispatchQueue.main.async { self?.growToFitCurrentContent() }
         }
 
@@ -50,30 +93,54 @@ final class StickyController: NSObject, NSWindowDelegate {
             hosting.needsDisplay = true
         }
 
-        // SwiftUI's TextField consumes the delete key for its own editing
-        // before onKeyPress(.delete) ever sees it — even when the field is
-        // empty — so backspace-deletes-empty-row has to be caught here.
+        // SwiftUI's TextField consumes Return/Delete for its own editing
+        // before onKeyPress can reliably inspect the AppKit caret, so every
+        // edit that crosses a TextField boundary — split, merge, backspace
+        // on an empty row, caret navigation between title/items — is caught
+        // here instead.
         //
-        // Also handles ⌘N and ⌘D here rather than relying on the status-bar
-        // menu's key equivalent: this app has no main menu bar (it's
-        // .accessory), so a menu item's key equivalent only ever fires
-        // while the status menu is literally open — it's not a real global
-        // shortcut. This makes ⌘N/⌘D work whenever a sticky window is
+        // Also handles sticky-specific shortcuts here rather than relying on
+        // the status-bar menu's key equivalent: this app has no main menu
+        // bar (it's .accessory), so a menu item's key equivalent only ever
+        // fires while that menu is literally open — not a real global
+        // shortcut. This makes them work whenever a sticky window is
         // focused, which isn't fully global either, but doesn't require
         // Accessibility/Input Monitoring permission the way a true
         // system-wide hotkey would.
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self, event.window === self.panel else { return event }
 
-            if event.modifierFlags.contains(.command), event.charactersIgnoringModifiers == "n" {
+            let commandModifiers = event.modifierFlags.intersection([.command, .shift, .control, .option])
+            let pressedKey = event.charactersIgnoringModifiers?.lowercased()
+
+            if pressedKey == "z", commandModifiers == .command, self.completionUndoManager.canUndo {
+                self.completionUndoManager.undo()
+                return nil
+            }
+            if pressedKey == "z", commandModifiers == [.command, .shift], self.completionUndoManager.canRedo {
+                self.completionUndoManager.redo()
+                return nil
+            }
+
+            if pressedKey == "n", commandModifiers == .command {
                 self.manager?.newSticky()
                 return nil
             }
-            if event.modifierFlags.contains(.command), event.charactersIgnoringModifiers == "d" {
+            if pressedKey == "d", commandModifiers == .command {
                 self.requestClose() // asks Archive/Delete/Cancel, same as the X button
                 return nil
             }
-            if event.modifierFlags.contains(.command), event.charactersIgnoringModifiers == "v",
+            if pressedKey == "w", commandModifiers == .command {
+                self.hide() // just closes the window — the sticky itself stays, reopenable from Home
+                return nil
+            }
+            // ⌘⌫/⌘⌦ — same archive/delete prompt as ⌘D, offered as the more
+            // conventional "close this thing for good" shortcut too.
+            if (event.keyCode == 51 || event.keyCode == 117), commandModifiers == .command {
+                self.requestClose()
+                return nil
+            }
+            if pressedKey == "v", commandModifiers == .command,
                let focusedID = self.model.focusedItemID,
                let clipboard = NSPasteboard.general.string(forType: .string) {
                 let lines = clipboard
@@ -88,34 +155,266 @@ final class StickyController: NSObject, NSWindowDelegate {
                 }
             }
 
-            guard event.keyCode == 51 /* delete */,
-                  let id = self.model.focusedItemID,
-                  let item = self.model.items.first(where: { $0.id == id }),
-                  item.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            else { return event }
-            self.model.onBackspaceEmptyRow?(id)
-            return nil
+            // Command-Up/Command-Down jumps to the very start/end of the
+            // sticky's whole document (title vs. last checklist item) —
+            // only when nothing's currently selected, so a real text
+            // selection's own Up/Down behavior isn't hijacked.
+            if event.keyCode == 126, commandModifiers == .command,
+               let editor = self.panel.firstResponder as? NSTextView, editor.selectedRange().length == 0 {
+                self.model.onMoveCaretToDocumentBoundary?(-1)
+                return nil
+            }
+            if event.keyCode == 125, commandModifiers == .command,
+               let editor = self.panel.firstResponder as? NSTextView, editor.selectedRange().length == 0 {
+                self.model.onMoveCaretToDocumentBoundary?(1)
+                return nil
+            }
+
+            // When the sticky is active but no text field owns the caret,
+            // Return resumes editing at the end of the last checklist item.
+            // A collapsed caret is safer than selecting the row: the next
+            // character appends instead of unexpectedly replacing its text.
+            if (event.keyCode == 36 || event.keyCode == 76),
+               commandModifiers.isEmpty, !(self.panel.firstResponder is NSTextView) {
+                self.model.onRequestLastItemFocus?()
+                return nil
+            }
+
+            // Everything below needs an actual text-editing caret to react
+            // to — a collapsed selection inside a real NSTextView.
+            guard commandModifiers.isEmpty,
+                  let editor = self.panel.firstResponder as? NSTextView,
+                  editor.selectedRange().length == 0
+            else {
+                // SwiftUI's TextField still consumes Delete before
+                // onKeyPress(.delete) ever sees it, even when the field is
+                // empty — backspace-deletes-empty-row has to be caught here
+                // as its own fallback, independent of the caret-crossing
+                // logic above (which needs a live NSTextView reference this
+                // path doesn't guarantee).
+                guard event.keyCode == 51 /* delete */,
+                      let id = self.model.focusedItemID,
+                      let item = self.model.items.first(where: { $0.id == id }),
+                      item.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                else { return event }
+                self.model.onBackspaceEmptyRow?(id)
+                return nil
+            }
+
+            let caret = editor.selectedRange().location
+            let length = (editor.string as NSString).length
+
+            // Treat the title like the first block in the checklist: Return
+            // splits at the caret and moves the suffix into a new row.
+            if (event.keyCode == 36 || event.keyCode == 76), self.model.isTitleFocused {
+                self.model.onSplitTitle?(caret)
+                return nil
+            }
+
+            // Treat checklist rows as blocks in one continuous editor.
+            // Return splits at the caret; at column zero the existing item
+            // moves down intact, while a middle split moves only the
+            // suffix into the new row.
+            if (event.keyCode == 36 || event.keyCode == 76),
+               let id = self.model.focusedItemID,
+               !editor.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                self.model.onSplitItem?(id, caret)
+                return nil
+            }
+
+            // At the start of a row, Backspace joins it to the preceding row
+            // (or to the title when this is the first item) — same
+            // fallback path above still catches the empty-row case where
+            // there's nothing to join into.
+            if event.keyCode == 51, caret == 0, let id = self.model.focusedItemID,
+               !(self.model.items.first(where: { $0.id == id })?.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true) {
+                self.model.onMergeItemBackward?(id)
+                return nil
+            }
+
+            // Fn-Delete is AppKit's forward-delete key. At the end of a row
+            // it removes the boundary to the next row while leaving the
+            // caret at that exact join point.
+            if event.keyCode == 117, let id = self.model.focusedItemID, caret == length {
+                self.model.onMergeItemForward?(id)
+                return nil
+            }
+
+            // Let AppKit move naturally between wrapped visual lines. At a
+            // field's top/bottom edge, continue into the adjacent
+            // title/item while preserving the caret's screen-space x.
+            if event.keyCode == 126, // up
+               self.isCaret(caret, on: .top, in: editor), self.hasAdjacentTextField(direction: -1) {
+                let screenX = editor.firstRect(
+                    forCharacterRange: NSRange(location: caret, length: 0), actualRange: nil
+                ).minX
+                self.model.onMoveCaretVertically?(self.model.isTitleFocused ? nil : self.model.focusedItemID, -1, screenX)
+                return nil
+            }
+            if event.keyCode == 125, // down
+               self.isCaret(caret, on: .bottom, in: editor), self.hasAdjacentTextField(direction: 1) {
+                let screenX = editor.firstRect(
+                    forCharacterRange: NSRange(location: caret, length: 0), actualRange: nil
+                ).minX
+                self.model.onMoveCaretVertically?(self.model.isTitleFocused ? nil : self.model.focusedItemID, 1, screenX)
+                return nil
+            }
+
+            if event.keyCode == 124, caret == length, self.hasAdjacentTextField(direction: 1) {
+                self.model.onMoveCaretHorizontally?(self.model.isTitleFocused ? nil : self.model.focusedItemID, 1)
+                return nil
+            }
+            if event.keyCode == 123, caret == 0, self.hasAdjacentTextField(direction: -1) {
+                self.model.onMoveCaretHorizontally?(self.model.isTitleFocused ? nil : self.model.focusedItemID, -1)
+                return nil
+            }
+
+            return event
         }
 
         // AppKit select-alls a field's text the instant it becomes first
-        // responder. Correcting that a runloop tick later (e.g. via
-        // DispatchQueue.main.async) still shows one flashed frame of the
-        // selection first; catching the selection-change notification
-        // itself lets us collapse it before anything is ever drawn.
+        // responder, and also does its own thing with selection color.
+        // Correcting the auto-select a runloop tick later (e.g. via
+        // DispatchQueue.main.async) still shows one flashed frame first;
+        // catching the selection-change notification itself lets us
+        // collapse it before anything is ever drawn. The same notification
+        // is also where a pending programmatic caret placement (from moving
+        // focus between fields) actually lands, once the destination editor
+        // has become first responder and posted its own selection change.
         selectionObserver = NotificationCenter.default.addObserver(
             forName: NSTextView.didChangeSelectionNotification, object: nil, queue: nil
         ) { [weak self] note in
             // queue: nil guarantees synchronous delivery on the posting
             // thread, which for NSTextView selection changes is always main.
             MainActor.assumeIsolated {
-                guard let self, self.suppressNextAutoSelect,
-                      let editor = note.object as? NSTextView, editor.window === self.panel
+                guard let self, let editor = note.object as? NSTextView, editor.window === self.panel
                 else { return }
-                self.suppressNextAutoSelect = false
-                let end = NSRange(location: (editor.string as NSString).length, length: 0)
-                if editor.selectedRange() != end { editor.setSelectedRange(end) }
+
+                self.applySelectionStyle(to: editor)
+
+                if self.suppressNextAutoSelect {
+                    self.suppressNextAutoSelect = false
+                    let end = NSRange(location: (editor.string as NSString).length, length: 0)
+                    if editor.selectedRange() != end { editor.setSelectedRange(end) }
+                    return
+                }
+
+                guard let placement = self.pendingCaretPlacement,
+                      let target = self.pendingCaretTarget,
+                      target.matches(self.model)
+                else { return }
+                self.pendingCaretPlacement = nil
+                self.pendingCaretTarget = nil
+                self.pendingCaretGeneration = nil
+                let caret = self.caretRange(for: placement, in: editor)
+                if editor.selectedRange() != caret { editor.setSelectedRange(caret) }
             }
         }
+    }
+
+    // MARK: - Caret placement
+
+    /// Call right before programmatically moving focus to a row, so the
+    /// automatic select-all that follows gets collapsed to a plain caret at
+    /// the semantic join/split point instead.
+    func placeCaretOnNextTitleFocus(atUTF16Offset offset: Int) {
+        prepareCaretPlacement(.offset(offset), for: .title)
+    }
+
+    func placeCaretOnNextItemFocus(_ id: UUID, atUTF16Offset offset: Int) {
+        prepareCaretPlacement(.offset(offset), for: .item(id))
+    }
+
+    /// Restores a caret after changing the text of the editor that already
+    /// owns first responder, where no focus transition will occur to consume
+    /// `pendingCaretPlacement`.
+    func restoreCaretInCurrentEditor(atUTF16Offset offset: Int) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let editor = self.panel.firstResponder as? NSTextView else { return }
+            let length = (editor.string as NSString).length
+            editor.setSelectedRange(NSRange(location: min(max(offset, 0), length), length: 0))
+        }
+    }
+
+    /// Places the caret on the first/last visual line of the next field at
+    /// the x-position closest to where it was in the field being left.
+    func placeCaretOnNextTitleFocus(alignedToScreenX screenX: CGFloat, entering edge: StickyCaretEdge) {
+        prepareCaretPlacement(.horizontal(screenX: screenX, edge: edge), for: .title)
+    }
+
+    func placeCaretOnNextItemFocus(_ id: UUID, alignedToScreenX screenX: CGFloat, entering edge: StickyCaretEdge) {
+        prepareCaretPlacement(.horizontal(screenX: screenX, edge: edge), for: .item(id))
+    }
+
+    /// A placement belongs only to the next focus transition for its exact
+    /// destination. Expiring an unused token prevents a later intentional
+    /// click or keyboard selection from being collapsed unexpectedly.
+    private func prepareCaretPlacement(_ placement: PendingCaretPlacement, for target: PendingCaretTarget) {
+        let generation = UUID()
+        pendingCaretPlacement = placement
+        pendingCaretTarget = target
+        pendingCaretGeneration = generation
+
+        DispatchQueue.main.async { [weak self] in
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.pendingCaretGeneration == generation else { return }
+                self.pendingCaretPlacement = nil
+                self.pendingCaretTarget = nil
+                self.pendingCaretGeneration = nil
+            }
+        }
+    }
+
+    private func caretRange(for placement: PendingCaretPlacement, in editor: NSTextView) -> NSRange {
+        let length = (editor.string as NSString).length
+        switch placement {
+        case .offset(let requestedLocation):
+            return NSRange(location: min(max(requestedLocation, 0), length), length: 0)
+
+        case .horizontal(let screenX, let edge):
+            let anchor = edge == .top ? 0 : length
+            let anchorRect = editor.firstRect(forCharacterRange: NSRange(location: anchor, length: 0), actualRange: nil)
+            let screenPoint = NSPoint(x: screenX, y: anchorRect.midY)
+            guard let window = editor.window else {
+                return NSRange(location: anchor, length: 0)
+            }
+            let windowPoint = window.convertPoint(fromScreen: screenPoint)
+            let editorPoint = editor.convert(windowPoint, from: nil)
+            let location = min(editor.characterIndexForInsertion(at: editorPoint), length)
+            return NSRange(location: location, length: 0)
+        }
+    }
+
+    private func isCaret(_ location: Int, on edge: StickyCaretEdge, in editor: NSTextView) -> Bool {
+        let length = (editor.string as NSString).length
+        guard length > 0 else { return true }
+        let caretRect = editor.firstRect(forCharacterRange: NSRange(location: min(location, length), length: 0), actualRange: nil)
+        let boundary = edge == .top ? 0 : length
+        let boundaryRect = editor.firstRect(forCharacterRange: NSRange(location: boundary, length: 0), actualRange: nil)
+        let tolerance = max(caretRect.height, boundaryRect.height) * 0.5
+        return abs(caretRect.midY - boundaryRect.midY) <= tolerance
+    }
+
+    private func hasAdjacentTextField(direction: Int) -> Bool {
+        if model.isTitleFocused { return direction > 0 && !model.orderedItems.isEmpty }
+        guard let id = model.focusedItemID,
+              let index = model.orderedItems.firstIndex(where: { $0.id == id })
+        else { return false }
+        if direction < 0 { return true } // the title precedes the first item
+        return index + 1 < model.orderedItems.count
+    }
+
+    /// Keeps text selection visually native to the sticky instead of using
+    /// macOS's neutral grey/accent highlight. Blending toward black preserves
+    /// the paper's hue; alpha keeps the selected text comfortably readable.
+    private func applySelectionStyle(to editor: NSTextView) {
+        let paper = NSColor(model.color.paper)
+        let darkerPaper = paper.blended(withFraction: 0.30, of: .black) ?? paper
+        let background = darkerPaper.withAlphaComponent(0.50)
+        var attributes = editor.selectedTextAttributes
+        guard attributes[.backgroundColor] as? NSColor != background else { return }
+        attributes[.backgroundColor] = background
+        editor.selectedTextAttributes = attributes
     }
 
     deinit {
@@ -167,7 +466,10 @@ final class StickyController: NSObject, NSWindowDelegate {
     func focusForTyping() {
         bringToFront()
         NSApp.activate(ignoringOtherApps: true)
-        DispatchQueue.main.async { [weak self] in self?.model.onRequestFocus?() }
+        // The end of the last item, not the first unfinished one — opening
+        // or reopening a sticky should resume typing where you left off,
+        // not jump back to the top of the list.
+        DispatchQueue.main.async { [weak self] in self?.model.onRequestLastItemFocus?() }
     }
 
     /// Applies a new height, keeping the whole window on-screen: grows
@@ -239,6 +541,31 @@ final class StickyController: NSObject, NSWindowDelegate {
 
     // MARK: - Actions surfaced to the SwiftUI content
 
+    /// True while ⌘Z/⌘⇧Z is replaying a completion toggle — lets the view
+    /// skip the staged-visibility exit animation during a replay, since the
+    /// undo/redo itself is already the "motion" the user asked for.
+    var isReplayingCompletionHistory: Bool {
+        completionUndoManager.isUndoing || completionUndoManager.isRedoing
+    }
+
+    func toggleDone(_ id: UUID) {
+        guard let item = model.items.first(where: { $0.id == id }) else { return }
+        let isDone = !item.isDone
+        setDone(id, isDone: isDone, completedAt: isDone ? Date() : nil)
+    }
+
+    private func setDone(_ id: UUID, isDone: Bool, completedAt: Date?) {
+        guard let item = model.items.first(where: { $0.id == id }) else { return }
+        let priorIsDone = item.isDone
+        let priorCompletedAt = item.completedAt
+
+        completionUndoManager.registerUndo(withTarget: self) { controller in
+            controller.setDone(id, isDone: priorIsDone, completedAt: priorCompletedAt)
+        }
+        completionUndoManager.setActionName(isDone ? "Complete Task" : "Reopen Task")
+        model.setDone(id, isDone: isDone, completedAt: completedAt)
+    }
+
     func requestNewSticky() { manager?.newSticky() }
 
     /// Genie-effect minimizes to the Dock, same as any other window —
@@ -284,6 +611,10 @@ final class StickyController: NSObject, NSWindowDelegate {
     }
 
     // MARK: - NSWindowDelegate (frame sync)
+
+    func windowWillReturnUndoManager(_ window: NSWindow) -> UndoManager? {
+        completionUndoManager
+    }
 
     func windowDidMove(_ notification: Notification) { syncFrame() }
     func windowDidResize(_ notification: Notification) { syncFrame() }

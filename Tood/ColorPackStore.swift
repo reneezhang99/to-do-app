@@ -1,4 +1,5 @@
 import Foundation
+import TootShared
 import Observation
 
 /// Tracks which paid color packs this Mac has unlocked. `@Observable` so

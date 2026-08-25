@@ -1,4 +1,5 @@
 import Foundation
+import TootShared
 
 /// Reads/writes the sticky collection as JSON inside the sandboxed app
 /// container's Application Support directory. No extra entitlement required.

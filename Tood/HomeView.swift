@@ -1,10 +1,12 @@
+import AppKit
 import SwiftUI
+import TootShared
 
 /// Shared sizing so the fan layout math and the card itself never drift
 /// apart. Narrower/taller than the first pass — closer to the real
 /// floating sticky's portrait proportions (378×490-ish) instead of the
-/// landscape-ish 200×178 it started as. Not private — ArchivedStickiesView
-/// reuses these same numbers so its grid of mini stickies matches exactly.
+/// landscape-ish 200×178 it started as. Not private — Home's inline archived
+/// panel reuses these same numbers so its memory cards match exactly.
 enum DeskCardMetrics {
     static let width: CGFloat = 178
     static let height: CGFloat = 200
@@ -28,7 +30,11 @@ struct HomeView: View {
     @State private var locationLabel: String?
     @State private var journalHover = false
     @State private var addCardHover = false
-    @State private var showingArchive = false
+    @State private var showingArchiveSection = false
+    @State private var archivedEntries: [ArchivedSticky] = []
+    @State private var dropTargetIndex: Int?
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let desk = Color(hex: 0xFBF8F1)
 
@@ -65,16 +71,22 @@ struct HomeView: View {
                 .padding(.horizontal, 44)
                 .padding(.bottom, 44)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+
+            // The archived fan itself — a dismissible panel that floats
+            // in-place above the Archive button rather than a separate
+            // sheet/window, so browsing memories never leaves Home.
+            archivedPanel
+                .padding(.horizontal, 44)
+                .padding(.bottom, 96)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
         }
         .frame(minWidth: 820, minHeight: 600)
         .sheet(isPresented: $showingJournal) {
             JournalZenView(journal: journal, initialDay: journalInitialDay, onDone: { showingJournal = false })
         }
-        .sheet(isPresented: $showingArchive) {
-            ArchivedStickiesView(manager: manager, onDone: { showingArchive = false })
-        }
         .onAppear {
             LocationStamper.shared.requestLabel { locationLabel = $0 }
+            reloadArchive()
         }
     }
 
@@ -134,16 +146,117 @@ struct HomeView: View {
     /// Quiet, always-there — finished stickies you archived (instead of
     /// deleted) from the close confirmation live here. Floats in the
     /// bottom-left corner, mirroring the journal button's bottom-right spot.
+    /// Toggles the inline panel below rather than opening a separate sheet,
+    /// so a memory is one click away without ever leaving Home.
     private var archiveButton: some View {
-        Button { showingArchive = true } label: {
+        Button {
+            if !showingArchiveSection { reloadArchive() }
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
+                showingArchiveSection.toggle()
+            }
+        } label: {
             HStack(spacing: 6) {
-                Image(systemName: "archivebox")
+                Image(systemName: showingArchiveSection ? "archivebox.fill" : "archivebox")
                 Text("Archive")
             }
             .font(.system(size: 12))
             .foregroundStyle(.secondary)
         }
         .buttonStyle(.plain)
+    }
+
+    /// The inline replacement for the old `ArchivedStickiesView` sheet —
+    /// same "browse memories as mini stickies" idea, same
+    /// `StickyDeskCard`/`archived_stickies.json` data underneath, just
+    /// surfaced in place instead of behind a modal. Capped width/height
+    /// (its own horizontal scroll past a handful of entries) so it never
+    /// forces Home's window taller regardless of how much is archived.
+    @ViewBuilder
+    private var archivedPanel: some View {
+        if showingArchiveSection {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack {
+                    Text("Archived")
+                        .font(.system(size: 14, weight: .medium))
+                    Spacer()
+                    Button {
+                        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
+                            showingArchiveSection = false
+                        }
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 20, height: 20)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+                if archivedEntries.isEmpty {
+                    Text("Archive a finished sticky (instead of deleting it) and it'll show up here.")
+                        .font(.system(size: 12.5))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: 320, alignment: .leading)
+                        .padding(.vertical, 24)
+                } else {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(alignment: .top, spacing: 20) {
+                            ForEach(archivedEntries) { entry in
+                                archivedCard(entry)
+                            }
+                        }
+                        .padding(.vertical, 6)
+                    }
+                }
+            }
+            .padding(20)
+            .frame(width: 620)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .shadow(color: .black.opacity(0.18), radius: 24, y: 12)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
+    }
+
+    private func archivedCard(_ entry: ArchivedSticky) -> some View {
+        // Own throwaway StickyModel purely for display, same trick the old
+        // sheet used — StickyDeskCard already renders exactly what a real
+        // sticky looks like, so a memory actually looks like one.
+        let entryModel = StickyModel(data: entry.data)
+        return VStack(spacing: 6) {
+            StickyDeskCard(model: entryModel, hoverHint: "Restore") {
+                restoreArchived(entry)
+            }
+            Text(Self.archivedDateFormatter.string(from: entry.archivedAt))
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+        }
+        .contextMenu {
+            Button("Delete Permanently", role: .destructive) {
+                requestDeleteArchived(entry)
+            }
+        }
+    }
+
+    private func restoreArchived(_ entry: ArchivedSticky) {
+        manager.restoreArchived(entry)
+        reloadArchive()
+    }
+
+    private func requestDeleteArchived(_ entry: ArchivedSticky) {
+        let alert = NSAlert()
+        alert.messageText = "Delete this memory for good?"
+        let title = entry.data.title.isEmpty ? "To Do" : entry.data.title
+        alert.informativeText = "\"\(title)\" will be gone for good, and can't be undone."
+        alert.addButton(withTitle: "Delete")
+        alert.addButton(withTitle: "Cancel")
+        alert.buttons.first?.hasDestructiveAction = true
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        manager.deleteArchived(entry.id)
+        reloadArchive()
+    }
+
+    private func reloadArchive() {
+        archivedEntries = manager.archivedStickies
     }
 
     private var greeting: String {
@@ -198,11 +311,27 @@ struct HomeView: View {
                         let positions = fanPositions(count: count + 1, availableWidth: proxy.size.width)
                         ForEach(Array(manager.order.enumerated()), id: \.element) { index, id in
                             if let controller = manager.controllers[id] {
-                                StickyDeskCard(model: controller.model) { manager.bringToFront(id) }
+                                StickyDeskCard(
+                                    model: controller.model,
+                                    shortcutLabel: StickySelectionShortcut.keyEquivalent(forStickyIndex: index).map { "⌃\($0)" },
+                                    hoverLiftDistance: 24,
+                                    isDropTargeted: dropTargetIndex == index
+                                ) { manager.bringToFront(id) }
                                     .rotationEffect(.degrees(rotation(for: index)))
                                     .offset(x: positions[index], y: verticalOffset(for: index))
                                     .zIndex(Double(index))
                                     .transition(.scale(scale: 0.85).combined(with: .opacity))
+                                    .draggable(id.uuidString)
+                                    .dropDestination(for: String.self) { droppedIDs, _ in
+                                        guard let sourceIDString = droppedIDs.first,
+                                              let sourceID = UUID(uuidString: sourceIDString)
+                                        else { return false }
+                                        manager.moveSticky(sourceID, to: index)
+                                        dropTargetIndex = nil
+                                        return true
+                                    } isTargeted: { isTargeted in
+                                        dropTargetIndex = isTargeted ? index : (dropTargetIndex == index ? nil : dropTargetIndex)
+                                    }
                             }
                         }
                         addStickyGhostCard
@@ -346,21 +475,43 @@ struct HomeView: View {
         f.dateFormat = "EEEE, MMMM d"
         return f
     }()
+
+    private static let archivedDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMM d, yyyy"
+        return f
+    }()
 }
 
 /// One sticky on the desk — same paper color/type as the real sticky, sized
 /// up to be the clear focal point, with a hover hint that appears when
 /// hovering its corner specifically (not the whole card). Defaults to "Pop
 /// out", foreshadowing the floating window it becomes when clicked — but
-/// ArchivedStickiesView reuses this exact card for its grid of memories,
-/// where clicking opens a read-only viewer instead, hence the override.
+/// Home's inline archived panel reuses this exact card for its memories,
+/// passing "Restore" instead, hence the override.
 struct StickyDeskCard: View {
     let model: StickyModel
     var hoverHint: String = "Pop out"
+    /// Shown as a small badge above the card on hover — the live fan on Home
+    /// passes its Control-number shortcut (e.g. "⌃1"); the archived fan and
+    /// the empty-state card leave it nil.
+    var shortcutLabel: String? = nil
+    /// How far the card lifts on hover. Home's live fan passes a more
+    /// dramatic 24pt (it's the thing you're actually working the whole
+    /// dashboard around); the archived fan keeps the original, quieter 9pt.
+    var hoverLiftDistance: CGFloat = 9
+    /// True while another card is being dragged over this one — draws an
+    /// accent ring so a reorder drop target is unambiguous.
+    var isDropTargeted: Bool = false
     var onShow: () -> Void
 
     @State private var hovering = false
     @State private var hoveringCorner = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Reduce Motion still gets the shadow deepening (no actual movement)
+    /// but skips the scale/lift itself.
+    private var lifting: Bool { hovering && !reduceMotion }
 
     var body: some View {
         Button(action: onShow) {
@@ -404,9 +555,15 @@ struct StickyDeskCard: View {
                 .padding(18)
                 .frame(width: DeskCardMetrics.width, height: DeskCardMetrics.height, alignment: .topLeading)
                 .background(model.color.paper, in: RoundedRectangle(cornerRadius: DeskCardMetrics.cornerRadius, style: .continuous))
+                .overlay {
+                    if isDropTargeted {
+                        RoundedRectangle(cornerRadius: DeskCardMetrics.cornerRadius, style: .continuous)
+                            .strokeBorder(Color.accentColor, lineWidth: 2.5)
+                    }
+                }
                 .shadow(color: .black.opacity(hovering ? 0.28 : 0.2), radius: hovering ? 20 : 13, y: hovering ? 12 : 8)
-                .scaleEffect(hovering ? 1.02 : 1)
-                .offset(y: hovering ? -9 : 0)
+                .scaleEffect(lifting ? 1.02 : 1)
+                .offset(y: lifting ? -hoverLiftDistance : 0)
 
                 if hoveringCorner {
                     Text(hoverHint)
@@ -429,8 +586,21 @@ struct StickyDeskCard: View {
                 .frame(width: 32, height: 32)
                 .contentShape(Rectangle())
                 .onHover { hoveringCorner = $0 }
-                .offset(y: hovering ? -9 : 0)
+                .offset(y: lifting ? -hoverLiftDistance : 0)
         }
-        .animation(.easeInOut(duration: 0.15), value: hovering)
+        .overlay(alignment: .topLeading) {
+            if let shortcutLabel, hovering {
+                Text(shortcutLabel)
+                    .font(.system(size: 9.5, weight: .semibold, design: .rounded))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(.black.opacity(0.75), in: Capsule())
+                    .foregroundStyle(.white)
+                    .offset(x: -4, y: lifting ? -hoverLiftDistance - 10 : -10)
+                    .transition(.opacity)
+            }
+        }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: hovering)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: isDropTargeted)
     }
 }
