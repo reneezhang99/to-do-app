@@ -494,49 +494,62 @@ final class StickyController: NSObject, NSWindowDelegate {
         panel.setFrame(f, display: true)
     }
 
-    /// Resizes the window to fit the checklist content. Uses
+    /// Grows the window to fit the checklist content. Uses
     /// NSHostingView.fittingSize (an AppKit-native "what height does this
     /// content actually need at its current width" query) rather than
     /// SwiftUI PreferenceKey plumbing, which turned out to under-report:
     /// content was measured after being silently compressed to whatever the
     /// window's current bounds already were.
-    private func resizeToFitContent(allowShrink: Bool) {
-        let needed = ceil(hosting.fittingSize.height)
-        let delta = needed - panel.frame.height
-        guard allowShrink ? abs(delta) > 0.5 : delta > 0.5 else { return }
+    ///
+    /// Grow-only: it never shrinks the window, so removing items or a
+    /// manual resize don't fight it.
+    private func growToFitCurrentContent() {
+        let needed = ceil(contentFittingHeight())
+        guard needed - panel.frame.height > 0.5 else { return }
         applyHeight(needed)
     }
 
-    /// As items are added, so it never needs an internal scroll. Grow-only —
-    /// never auto-shrinks, so removing items or a manual resize don't fight
-    /// this.
-    private func growToFitCurrentContent() { resizeToFitContent(allowShrink: false) }
+    /// How tall the SwiftUI content wants to be. `sizingOptions = []` (see
+    /// init) makes `fittingSize` report 0, so the intrinsic size is switched
+    /// on just for this one measurement and straight back off — AppKit's
+    /// live resize never sees it, so the can't-shrink ratchet stays fixed.
+    /// Measuring a 0 here once snapped the window to 0pt tall: the sticky
+    /// vanished as soon as a new row needed room.
+    private func contentFittingHeight() -> CGFloat {
+        hosting.sizingOptions = [.intrinsicContentSize]
+        defer { hosting.sizingOptions = [] }
+        return hosting.fittingSize.height
+    }
 
-    /// Collapsing/expanding the checklist (see StickyRootView) explicitly
-    /// wants a shrink too, unlike the passive grow-as-you-type behavior.
-    func recheckContentSize() {
-        DispatchQueue.main.async { [weak self] in self?.resizeToFitContent(allowShrink: true) }
+    /// The follow-up to `growBy`/`collapse`: once SwiftUI has rendered the
+    /// rows the new height reveals, grows further if they came out taller
+    /// than estimated (e.g. wrapped rows, or an estimate that undershoots
+    /// and would clip the bottom toolbar).
+    ///
+    /// Grow-only on purpose. The view's row-capacity math assumes more
+    /// chrome height than the content really measures, so snapping *down*
+    /// to the exact fit left the view thinking one fewer row fit — it hid a
+    /// row, and the next snap shrank further, one row per new item.
+    private func growToFitAfterRender() {
+        DispatchQueue.main.async { [weak self] in self?.growToFitCurrentContent() }
     }
 
     /// Grows by an estimated number of rows — used to reveal rows hidden
     /// behind "N more", or a row a keystroke just created past the current
-    /// fit. The estimate needn't be exact: revealing more rows changes what
-    /// SwiftUI renders, so the follow-up `recheckContentSize()` snaps the
-    /// window to the precise fit once that's rendered.
+    /// fit.
     func growBy(rows: Int, estimatedRowHeight: CGFloat) {
         guard rows > 0 else { return }
         applyHeight(panel.frame.height + CGFloat(rows) * estimatedRowHeight)
-        recheckContentSize()
+        growToFitAfterRender()
     }
 
-    /// Shrinks back to a compact height fitting `rows` rows — the
-    /// checklist's "Show less" toggle. Same estimate-then-snap pattern as
-    /// `growBy`: the rough analytical target can undershoot (which clipped
-    /// the bottom toolbar), so `recheckContentSize()` corrects it against
-    /// the real fitting size right after.
+    /// Shrinks back to a compact height whose row capacity is `rows` — the
+    /// checklist's "Show less" toggle. The estimated height is the floor:
+    /// shrinking past it to the content's exact fit is what used to hide
+    /// half the rows "Show less" promised.
     func collapse(toRows rows: Int, rowHeight: CGFloat, chromeHeight: CGFloat) {
         applyHeight(ceil(chromeHeight + CGFloat(rows) * rowHeight))
-        recheckContentSize()
+        growToFitAfterRender()
     }
 
     // MARK: - Actions surfaced to the SwiftUI content
