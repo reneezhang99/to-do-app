@@ -11,7 +11,18 @@
       <sparkle:version>10</sparkle:version>
       <sparkle:shortVersionString>1.8.1</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <!-- Builds below 10 (v1.3.0–v1.7.0, plus the never-shipped v1.8.0) are
+           App Sandboxed, so Sparkle's installer can't get the permission it
+           needs to replace them — the in-app install always fails. Instead of
+           letting them hit that error, show them a "Learn More" button that
+           downloads the DMG for a one-time manual install. Build 10+ isn't
+           sandboxed and still installs automatically. -->
+      <link>https://toodapp.com/api/download</link>
+      <sparkle:informationalUpdate>
+        <sparkle:belowVersion>10</sparkle:belowVersion>
+      </sparkle:informationalUpdate>
       <description><![CDATA[
+        <p><b>Updating from an older version?</b> This one needs a one-time manual install. Click <b>Learn More</b> to download it, open the file, and drag Tood into Applications. Future updates will install automatically again.</p>
         <ul>
           <li>Fixed sticky windows sometimes not shrinking back down after being resized wider</li>
           <li>Control+1…0 jumps straight to any of your first ten stickies</li>
