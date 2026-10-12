@@ -16,7 +16,9 @@
            needs to replace them — the in-app install always fails. Instead of
            letting them hit that error, show them a "Learn More" button that
            downloads the DMG for a one-time manual install. Build 10+ isn't
-           sandboxed and still installs automatically. -->
+           sandboxed and still installs automatically.
+           Copy this <link> + <sparkle:informationalUpdate> pair into every
+           new release entry, or old builds will try to install it and fail. -->
       <link>https://toodapp.com/api/download</link>
       <sparkle:informationalUpdate>
         <sparkle:belowVersion>10</sparkle:belowVersion>
