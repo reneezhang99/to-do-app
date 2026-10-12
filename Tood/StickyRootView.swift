@@ -332,8 +332,8 @@ struct StickyRootView: View {
 
     private let corner: CGFloat = 4
     /// Estimates for how many rows currently fit — not pixel-precise (rows
-    /// can wrap), but `StickyController.recheckContentSize()` snaps the
-    /// window to the exact fit right after, so small errors self-correct.
+    /// can wrap), but `StickyController` grows the window to the real fit
+    /// right after, so an undershoot self-corrects.
     /// Matches the checkbox's 34pt-tall click target (see `checkbox(_:)`)
     /// plus the row's 6+6 vertical padding and 1pt divider — stale here
     /// after that target was made taller was exactly what caused a visible
@@ -360,7 +360,10 @@ struct StickyRootView: View {
             bottomToolbar
             topRightButtons
         }
-        .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .top)
+        // idealWidth: the controller measures this view's *ideal* size to
+        // grow the window. Without it the ideal width is unbounded, so long
+        // rows measured as one unwrapped line and never got room to wrap.
+        .frame(idealWidth: availableWidth, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .top)
         // A `.background` GeometryReader reads the window's current height
         // for the fluid collapse threshold below without becoming the root
         // of the view tree — a GeometryReader as body's *root* (tried
@@ -650,7 +653,10 @@ struct StickyRootView: View {
             }
         } else if total > defaultCollapsedRows {
             toggleButton(label: "Show less", systemImage: "chevron.up") {
-                controller.collapse(toRows: defaultCollapsedRows,
+                // +1: once rows are hidden, the "N more" toggle takes a
+                // capacity slot itself (see `visibleItems`) — without it,
+                // "Show less" showed one row fewer than it meant to.
+                controller.collapse(toRows: defaultCollapsedRows + 1,
                                     rowHeight: rowHeightEstimate, chromeHeight: chromeHeightEstimate)
             }
         }
