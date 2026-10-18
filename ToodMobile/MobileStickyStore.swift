@@ -114,6 +114,20 @@ final class MobileStickyStore {
         Analytics.track(.itemAdded)
     }
 
+    /// The keyboard's indent button: tucks a row under the one above it, or
+    /// pulls it back out. Same rules as Tab on the Mac: one level only, and
+    /// the first row can't be tucked since nothing is above it.
+    func setItemNested(_ id: UUID, _ itemID: UUID, _ isNested: Bool) {
+        mutate(id) { data in
+            guard let idx = data.items.firstIndex(where: { $0.id == itemID }),
+                  data.items[idx].isNested != isNested,
+                  !(isNested && idx == 0)
+            else { return }
+            data.items[idx].isNested = isNested
+            if isNested { Analytics.track(.itemNested) }
+        }
+    }
+
     func deleteItem(_ id: UUID, _ itemID: UUID) {
         mutate(id) { $0.items.removeAll { $0.id == itemID } }
         Analytics.track(.itemDeleted)

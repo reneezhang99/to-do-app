@@ -83,6 +83,12 @@ struct MobileStickyDetailView: View {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("Done") { dismiss() }
                     }
+                    // Phones have no Tab key, so this button above the
+                    // keyboard does the Mac's Tab / Shift-Tab instead.
+                    ToolbarItemGroup(placement: .keyboard) {
+                        indentButton(data)
+                        Spacer()
+                    }
                 }
                 .confirmationDialog(
                     "Delete this sticky?",
@@ -137,6 +143,25 @@ struct MobileStickyDetailView: View {
         .padding(.vertical, 10)
         .padding(.horizontal, 16)
         .background(data.colorID.paper.ignoresSafeArea(edges: .bottom))
+    }
+
+    /// Tucks the row you're typing in under the one above it, or pulls it
+    /// back out. Greyed out while typing the title, and on the first row
+    /// (there's nothing above it to tuck under).
+    private func indentButton(_ data: StickyData) -> some View {
+        let item = data.items.first { $0.id == focusedField }
+        let isNested = item?.isNested ?? false
+        let canIndent = item != nil && (isNested || data.items.first?.id != item?.id)
+        return Button {
+            guard let item else { return }
+            withAnimation(.snappy(duration: 0.2)) {
+                store.setItemNested(id, item.id, !isNested)
+            }
+        } label: {
+            Image(systemName: isNested ? "decrease.indent" : "increase.indent")
+        }
+        .disabled(!canIndent)
+        .accessibilityLabel(isNested ? "Move out" : "Indent")
     }
 
     private func colorPicker(_ data: StickyData) -> some View {
