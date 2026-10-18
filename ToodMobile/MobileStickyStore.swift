@@ -74,7 +74,6 @@ final class MobileStickyStore {
         let item = stickies.remove(at: from)
         stickies.insert(item, at: min(max(to, 0), stickies.count))
         persist()
-        Analytics.track(.stickiesReordered)
     }
 
     func setTitle(_ id: UUID, _ title: String) {

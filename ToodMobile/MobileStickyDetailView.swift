@@ -206,6 +206,10 @@ struct MobileStickyDetailView: View {
                             .frame(width: 18, height: 18)
                     }
                 }
+                // An outlined box only counts taps on its thin border, so a
+                // tap in the middle of an empty checkbox did nothing. This
+                // makes the whole square tappable.
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
