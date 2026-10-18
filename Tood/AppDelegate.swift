@@ -3,6 +3,7 @@ import SwiftUI
 import CoreText
 import Sparkle
 import TootShared
+import ToodAnalytics
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -48,6 +49,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusMenu = StatusMenuController(manager: manager, appDelegate: self)
         manager.restoreAll()
         setUpCloudSync()
+        reportSetupToAnalytics()
 
         GlobalHotKeyManager.shared.onShowSticky = { [weak self] in self?.manager.showActiveSticky() }
         GlobalHotKeyManager.shared.onNewSticky = { [weak self] in
@@ -69,6 +71,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                   let index = StickySelectionShortcut.stickyIndex(forKeyEquivalent: key),
                   self.manager.focusSticky(atShortcutIndex: index)
             else { return event }
+            Analytics.track(.stickyShortcutUsed, ["slot": index + 1])
             return nil
         }
 
@@ -162,6 +165,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task { await CloudSyncService.shared.pushLocalChanges() }
     }
 
+    /// A snapshot of how this person has Tood set up, refreshed every
+    /// launch. Lets charts split by things like "has calendar connected".
+    private func reportSetupToAnalytics() {
+        let settings = AppSettings.shared
+        Analytics.setPersonProperties([
+            "open_sticky_count": manager.order.count,
+            "archived_sticky_count": manager.archivedStickies.count,
+            "journal_entry_count": journal.entries.count,
+            "calendar_connected": GoogleAuthService.shared.isConnected,
+            "color_packs_owned": ColorPackStore.shared.unlockedPackIDs.count,
+            "launch_at_login": settings.launchAtLogin,
+            "journal_location_enabled": settings.journalLocationEnabled,
+            "close_behavior": settings.closeBehavior.rawValue,
+            "completion_animations_enabled": settings.completionAnimationsEnabled,
+            "onboarding_completed": settings.onboardingCompleted,
+        ])
+    }
+
     // MARK: - Windows
 
     func showHome() {
@@ -174,6 +195,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             )
         }
         homeWindow?.present()
+        Analytics.screen("Home")
         // The periodic refresh in AgendaTimeline can be up to 5 minutes
         // stale — an immediate one here makes reopening Home feel current
         // right away instead of waiting for the next tick.
@@ -183,6 +205,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// The status menu's "Check for Updates…" — same feed/UI Sparkle's own
     /// background checks use, just triggered on demand.
     func checkForUpdates() {
+        Analytics.track(.updateCheckClicked)
         updaterController.checkForUpdates(nil)
     }
 
@@ -196,6 +219,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             )
         }
         settingsWindow?.present()
+        Analytics.screen("Settings")
     }
 
     /// Fresh window every time (unlike Settings/Home, which stay around) —
@@ -214,6 +238,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         reportBugWindow = controller
         controller.present()
+        Analytics.screen("Report Bug")
     }
 
     private func showIntro() {
@@ -230,6 +255,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         introWindow = controller
         controller.present()
+        Analytics.screen("Intro")
     }
 
     private func showOnboarding() {
@@ -251,6 +277,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         onboardingWindow = controller
         controller.present()
+        Analytics.screen("Onboarding")
+        Analytics.track(.onboardingStarted)
     }
 
     /// Register any fonts bundled in the app (e.g. ABC Stefan Trial) so they

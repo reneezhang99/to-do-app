@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import ToodAnalytics
 
 /// A way to tell people something without shipping a new version —
 /// Sparkle's release notes only show up when there's an actual update to
@@ -41,11 +42,13 @@ final class AnnouncementService {
             let lastSeen = UserDefaults.standard.string(forKey: defaultsKey)
             guard announcement.id != lastSeen else { return }
             current = announcement
+            Analytics.track(.announcementShown, ["announcement_id": announcement.id])
         }
     }
 
     func dismiss() {
         if let id = current?.id {
+            Analytics.track(.announcementDismissed, ["announcement_id": id])
             UserDefaults.standard.set(id, forKey: defaultsKey)
         }
         current = nil

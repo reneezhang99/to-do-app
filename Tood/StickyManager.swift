@@ -2,6 +2,7 @@ import AppKit
 import CloudKit
 import Observation
 import TootShared
+import ToodAnalytics
 
 /// Owns every sticky controller and the shared services. Handles restore,
 /// create, remove, show/hide, debounced saving, and the day rollover.
@@ -66,6 +67,7 @@ final class StickyManager {
         addController(for: model)
         controllers[model.id]?.bringToFront()
         scheduleSave()
+        Analytics.track(.stickyCreated, ["open_sticky_count": order.count])
     }
 
     func remove(_ id: UUID) {
@@ -87,6 +89,7 @@ final class StickyManager {
         stickyArchive.append(archived)
         CloudSyncService.shared.save(id: archived.id, collection: .archivedSticky)
         remove(id)
+        Analytics.track(.stickyArchived, ["item_count": archived.data.items.count])
     }
 
     /// Newest first — same ordering the old archive sheet reloaded with,
@@ -116,6 +119,7 @@ final class StickyManager {
         scheduleSave()
         controllers[model.id]?.bringToFront()
         noteActive(model.id)
+        Analytics.track(.archivedStickyRestored)
     }
 
     /// Removes an archived sticky for good — the inline archived fan's own
@@ -123,6 +127,7 @@ final class StickyManager {
     func deleteArchived(_ id: UUID) {
         stickyArchive.delete(id)
         CloudSyncService.shared.delete(id: id, collection: .archivedSticky)
+        Analytics.track(.archivedStickyDeleted)
     }
 
     /// Reorders the live sticky fan by moving `id` to sit at `index`. Used by
@@ -135,6 +140,7 @@ final class StickyManager {
         updated.insert(id, at: clamped)
         order = updated
         scheduleSave()
+        Analytics.track(.stickiesReordered)
     }
 
     func showAll() { for c in controllers.values { c.show() } }
@@ -143,6 +149,7 @@ final class StickyManager {
     /// Deletes every sticky. Irreversible, same as closing one — the caller
     /// (the status menu) is responsible for confirming with the user first.
     func removeAll() {
+        Analytics.track(.allStickiesDeleted, ["count": order.count])
         for id in order { remove(id) }
     }
 

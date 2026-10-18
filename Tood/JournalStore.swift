@@ -1,6 +1,7 @@
 import CloudKit
 import Foundation
 import TootShared
+import ToodAnalytics
 import Observation
 
 /// Owns the journal's one-entry-per-day model. `@Observable` so the Home
@@ -38,6 +39,7 @@ final class JournalStore {
             entries.append(entry)
             entryID = entry.id
             stampLocationIfEnabled()
+            Analytics.track(.journalEntryStarted)
         }
         CloudSyncService.shared.save(id: entryID, collection: .journalEntry)
         scheduleSave()

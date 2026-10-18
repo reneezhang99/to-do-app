@@ -1,5 +1,6 @@
 import SwiftUI
 import TootShared
+import ToodAnalytics
 
 /// Small sheet shown when tapping a locked pack color in any swatch picker:
 /// buy via Polar checkout in the browser, or redeem an already-purchased
@@ -37,6 +38,7 @@ struct ColorPackPaywallView: View {
                 .foregroundStyle(.secondary)
 
             Button("Buy \(pack.displayName)") {
+                Analytics.track(.colorPackCheckoutClicked, ["pack": pack.id])
                 NSWorkspace.shared.open(pack.checkoutURL)
             }
             .buttonStyle(.borderedProminent)
@@ -63,6 +65,7 @@ struct ColorPackPaywallView: View {
         }
         .padding(20)
         .frame(width: 320)
+        .onAppear { Analytics.track(.colorPackPaywallViewed, ["pack": pack.id]) }
     }
 
     private func redeem() {
@@ -72,9 +75,11 @@ struct ColorPackPaywallView: View {
             defer { isRedeeming = false }
             do {
                 try await ColorPackStore.shared.redeem(licenseKey: licenseKey, for: pack)
+                Analytics.track(.colorPackRedeemed, ["pack": pack.id])
                 onUnlocked()
                 dismiss()
             } catch {
+                Analytics.track(.colorPackRedeemFailed, ["pack": pack.id])
                 errorMessage = error.localizedDescription
             }
         }

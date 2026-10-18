@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
+import ToodAnalytics
 
 /// Text + an optional screenshot, straight to `docs/api/report-bug.js` —
 /// the app never knows (and can't know) where it actually ends up. That
@@ -105,6 +106,7 @@ struct ReportBugView: View {
                 isSending = false
                 if let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) {
                     didSend = true
+                    Analytics.track(.bugReportSent, ["has_screenshot": image != nil])
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1) { onDone() }
                 } else {
                     sendError = "Couldn't send, check your connection and try again."

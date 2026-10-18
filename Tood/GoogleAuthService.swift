@@ -3,6 +3,7 @@ import AuthenticationServices
 import CryptoKit
 import Foundation
 import Observation
+import ToodAnalytics
 
 /// Direct Google OAuth (not EventKit/Calendar.app) — most people's Google
 /// accounts aren't hooked into macOS's Calendar app, so going straight to
@@ -122,6 +123,7 @@ final class GoogleAuthService: NSObject {
         connectedEmail = nil
         UserDefaults.standard.removeObject(forKey: Keys.email)
         isConnected = false
+        Analytics.track(.calendarDisconnected)
     }
 
     // MARK: - Tokens
@@ -181,6 +183,7 @@ final class GoogleAuthService: NSObject {
         accessTokenExpiry = Date().addingTimeInterval(TimeInterval(token.expiresIn - 60))
         if let newRefreshToken = token.refreshToken { refreshToken = newRefreshToken }
         isConnected = true
+        Analytics.track(.calendarConnected)
 
         try? await fetchAndStoreEmail()
     }

@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import TootShared
+import ToodAnalytics
 
 /// Runtime model for a single sticky. SwiftUI observes it directly.
 /// `StickyData`, the plain `Codable` snapshot this wraps, lives in the
@@ -125,6 +126,7 @@ final class StickyModel: Identifiable {
             items.append(new)
         }
         notifyChanged()
+        Analytics.track(.itemAdded)
         return new.id
     }
 
@@ -149,6 +151,7 @@ final class StickyModel: Identifiable {
         }
 
         notifyChanged()
+        Analytics.track(.itemAdded)
         return new.id
     }
 
@@ -195,6 +198,7 @@ final class StickyModel: Identifiable {
             lastID = newItem.id
         }
         notifyChanged()
+        Analytics.track(.itemAdded, ["via": "paste", "count": lines.count])
         return lastID ?? targetID
     }
 
@@ -218,6 +222,7 @@ final class StickyModel: Identifiable {
     func delete(_ id: UUID) {
         items.removeAll { $0.id == id }
         notifyChanged()
+        Analytics.track(.itemDeleted)
     }
 
     /// Applies the reveal-time grouping once, preserving relative order
@@ -246,8 +251,14 @@ final class StickyModel: Identifiable {
     }
 
 
-    func setColor(_ c: StickyColor) { colorID = c; notifyChanged() }
-    func setFont(_ f: StickyFont) { fontID = f; notifyChanged() }
+    func setColor(_ c: StickyColor) {
+        colorID = c; notifyChanged()
+        Analytics.track(.stickyColorChanged, ["color": c.rawValue])
+    }
+    func setFont(_ f: StickyFont) {
+        fontID = f; notifyChanged()
+        Analytics.track(.stickyFontChanged, ["font": f.rawValue])
+    }
     func setTitle(_ t: String) { title = t; notifyChanged() }
 
     // MARK: - Factory

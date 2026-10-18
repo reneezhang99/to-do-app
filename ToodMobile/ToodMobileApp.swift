@@ -1,6 +1,7 @@
 import CoreText
 import SwiftUI
 import TootShared
+import ToodAnalytics
 
 @main
 struct ToodMobileApp: App {
@@ -9,6 +10,8 @@ struct ToodMobileApp: App {
     @State private var foregroundPullTimer: Timer?
 
     init() {
+        // First thing, so PostHog sees this launch too.
+        Analytics.start()
         Self.registerBundledFonts()
     }
 
@@ -16,6 +19,7 @@ struct ToodMobileApp: App {
         WindowGroup {
             MobileHomeView()
                 .environment(store)
+                .onAppear { Analytics.setPersonProperties(["mobile_sticky_count": store.stickies.count]) }
         }
         // Mirrors the Mac's `applicationDidBecomeActive` + periodic-timer
         // pair (see AppDelegate.swift) — without this, mobile only ever

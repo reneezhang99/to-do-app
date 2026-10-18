@@ -1,5 +1,6 @@
 import SwiftUI
 import TootShared
+import ToodAnalytics
 import UIKit
 
 /// The phone's home screen: every sticky as a full-width card, stacked and
@@ -96,10 +97,12 @@ struct MobileHomeView: View {
             .fullScreenCover(item: $selected.animation()) { id in
                 if let sticky = store.stickies.first(where: { $0.id == id }) {
                     MobileStickyDetailView(id: sticky.id)
+                        .onAppear { Analytics.screen("Sticky") }
                 }
             }
         }
         .task { await store.refreshFromCloud() }
+        .onAppear { Analytics.screen("Home") }
     }
 
     /// Hold-and-drag reordering. A `LongPressGesture` gates it so a plain
