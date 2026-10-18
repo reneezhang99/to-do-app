@@ -222,10 +222,17 @@ final class StickyController: NSObject, NSWindowDelegate {
                 return nil
             }
 
+            // Backspace on an empty row deletes it and moves up a row. The
+            // fallback above only fires when no NSTextView owns the caret,
+            // so typing in an empty row has to be caught here too.
+            if event.keyCode == 51, !self.model.isTitleFocused, let id = self.model.focusedItemID,
+               editor.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                self.model.onBackspaceEmptyRow?(id)
+                return nil
+            }
+
             // At the start of a row, Backspace joins it to the preceding row
-            // (or to the title when this is the first item) — same
-            // fallback path above still catches the empty-row case where
-            // there's nothing to join into.
+            // (or to the title when this is the first item).
             if event.keyCode == 51, caret == 0, let id = self.model.focusedItemID,
                !(self.model.items.first(where: { $0.id == id })?.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true) {
                 self.model.onMergeItemBackward?(id)
