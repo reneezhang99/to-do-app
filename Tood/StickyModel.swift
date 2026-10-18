@@ -104,6 +104,7 @@ final class StickyModel: Identifiable {
     /// keeps `updatedAt` actually meaning "last edited" for iCloud sync's
     /// conflict resolution, not just a field that exists but never moves.
     private func notifyChanged() {
+        items.untuckFirstRow()
         updatedAt = Date()
         onChange?()
     }

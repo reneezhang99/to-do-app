@@ -35,3 +35,27 @@ public struct TodoItem: Identifiable, Codable, Equatable {
         isNested = try c.decodeIfPresent(Bool.self, forKey: .isNested) ?? false
     }
 }
+
+extension Array where Element == TodoItem {
+    /// The first row has nothing above it to sit under, so it's never
+    /// tucked in. Run after anything that can change which row is first:
+    /// deleting, dragging, clearing finished rows.
+    public mutating func untuckFirstRow() {
+        if first?.isNested == true { self[0].isNested = false }
+    }
+
+    /// Drops the finished rows. A tucked-in row whose parent was one of
+    /// them gets pulled back out, so it doesn't slide under a different row.
+    public mutating func removeDone() {
+        var parentRemoved = false
+        var kept: [TodoItem] = []
+        for var item in self {
+            if !item.isNested { parentRemoved = item.isDone }
+            guard !item.isDone else { continue }
+            if item.isNested && parentRemoved { item.isNested = false }
+            kept.append(item)
+        }
+        self = kept
+        untuckFirstRow()
+    }
+}

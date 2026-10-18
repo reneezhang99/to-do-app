@@ -67,6 +67,8 @@ struct MobileStickyCardView: View {
                 .strikethrough(item.isDone, color: color.inkSecondary)
                 .lineLimit(2)
         }
+        // Tucked-in rows line up under the text above (14pt box + 12pt gap).
+        .padding(.leading, item.isNested ? 26 : 0)
     }
 
     private static let dateFormatter: DateFormatter = {

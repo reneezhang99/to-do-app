@@ -294,7 +294,7 @@ final class StickyManager {
                     completedAt: item.completedAt, archivedOn: now,
                     stickyColor: model.color))
             }
-            model.items.removeAll { $0.isDone }
+            model.items.removeDone()
             model.day = now
             model.updatedAt = now
             CloudSyncService.shared.save(id: model.id, collection: .sticky)

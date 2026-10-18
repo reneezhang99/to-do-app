@@ -139,6 +139,7 @@ final class MobileStickyStore {
     private func mutate(_ id: UUID, _ change: (inout StickyData) -> Void) {
         guard let idx = stickies.firstIndex(where: { $0.id == id }) else { return }
         change(&stickies[idx])
+        stickies[idx].items.untuckFirstRow()
         stickies[idx].updatedAt = Date()
         commit(id)
     }
