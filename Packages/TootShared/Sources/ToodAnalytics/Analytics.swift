@@ -82,6 +82,13 @@ public enum Analytics {
         PostHogSDK.shared.setup(config)
     }
 
+    /// The iPhone's switch lives in the Settings app, which flips the saved
+    /// value behind Tood's back. Call this when the app comes back to the
+    /// front so a change there takes effect right away.
+    public static func applySavedChoice() {
+        if isEnabled { PostHogSDK.shared.optIn() } else { PostHogSDK.shared.optOut() }
+    }
+
     public static func track(_ event: AnalyticsEvent, _ properties: [String: Any] = [:]) {
         PostHogSDK.shared.capture(event.rawValue, properties: properties.isEmpty ? nil : properties)
     }

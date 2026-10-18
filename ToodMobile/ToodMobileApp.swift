@@ -30,6 +30,9 @@ struct ToodMobileApp: App {
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .active:
+                // Picks up the "Share anonymous usage data" switch, which
+                // lives in the iPhone's Settings app under Tood.
+                Analytics.applySavedChoice()
                 Task { await store.refreshFromCloud() }
                 foregroundPullTimer?.invalidate()
                 foregroundPullTimer = Timer.scheduledTimer(withTimeInterval: 90, repeats: true) { _ in
