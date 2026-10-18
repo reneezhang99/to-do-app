@@ -230,9 +230,13 @@ struct MobileStickyDetailView: View {
             .buttonStyle(.plain)
         }
         .padding(.vertical, 10)
+        // Rows tucked in on the Mac (Tab) sit under the text of the row
+        // above: the 18pt checkbox plus the row's 14pt gap.
+        .padding(.leading, item.isNested ? 32 : 0)
         Rectangle()
             .fill(color.divider)
             .frame(height: 1)
+            .padding(.leading, item.isNested ? 32 : 0)
     }
 
     private func textBinding(_ item: TodoItem) -> Binding<String> {

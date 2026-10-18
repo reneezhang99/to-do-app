@@ -27,6 +27,7 @@ public enum AnalyticsEvent: String {
     case archivedStickyDeleted = "archived_sticky_deleted"
     case allStickiesDeleted = "all_stickies_deleted"
     case stickyShortcutUsed = "sticky_shortcut_used"
+    case itemNested = "item_nested"
     case journalEntryStarted = "journal_entry_started"
     case onboardingStarted = "onboarding_started"
     case onboardingCompleted = "onboarding_completed"

@@ -548,6 +548,9 @@ struct StickyDeskCard: View {
                                     .strikethrough(item.isDone, color: model.color.inkSecondary)
                                     .lineLimit(1)
                             }
+                            // Tucked-in rows line up under the text above
+                            // (11pt box + 8pt gap), same as on the sticky.
+                            .padding(.leading, item.isNested ? 19 : 0)
                         }
                     }
                     Spacer(minLength: 0)
