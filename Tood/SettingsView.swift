@@ -1,5 +1,6 @@
 import SwiftUI
 import TootShared
+import ToodAnalytics
 
 /// Every persisted preference in one place — the default-color/font/position
 /// pickers reuse the exact same `StickyColor`/`StickyFont`/`StickyCorner`
@@ -21,6 +22,7 @@ struct SettingsView: View {
     @State private var showFontPicker = false
     @State private var connectingCalendar = false
     @State private var paywallPack: ColorPack?
+    @State private var shareUsageData = Analytics.isEnabled
     @Bindable var settings: AppSettings
     private var packStore: ColorPackStore { ColorPackStore.shared }
 
@@ -89,6 +91,14 @@ struct SettingsView: View {
             }
             .onChange(of: settings.showStickyShortcut) { _, _ in GlobalHotKeyManager.shared.reregister() }
             .onChange(of: settings.newStickyShortcut) { _, _ in GlobalHotKeyManager.shared.reregister() }
+
+            Section("Privacy") {
+                Toggle("Share anonymous usage data", isOn: $shareUsageData)
+                    .onChange(of: shareUsageData) { _, on in Analytics.isEnabled = on }
+                Text("Counts things like stickies made and tasks checked off, plus crash reports, to help improve Tood. Never what you write.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
         .formStyle(.grouped)
         .frame(width: 460, height: 480)

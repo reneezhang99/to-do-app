@@ -1,5 +1,6 @@
 import SwiftUI
 import TootShared
+import ToodAnalytics
 
 /// First-run only. Reuses the exact same defaults `SettingsView` edits later
 /// (same `StickyColor`/`StickyFont` statics, same `AppSettings` shortcuts) —
@@ -269,6 +270,7 @@ struct OnboardingView: View {
         StickyFont.defaultFont = font
         GlobalHotKeyManager.shared.reregister()
         settings.onboardingCompleted = true
+        Analytics.track(.onboardingCompleted, ["color": color?.rawValue ?? "random", "font": font.rawValue])
         onFinish()
     }
 }

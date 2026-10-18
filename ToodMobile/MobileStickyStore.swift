@@ -3,6 +3,7 @@ import CoreGraphics
 import Foundation
 import Observation
 import TootShared
+import ToodAnalytics
 
 /// The iPhone app's equivalent of the Mac's `StickyManager` — same local
 /// JSON file convention and the same `SyncCollectionSource` contract, just
@@ -60,6 +61,7 @@ final class MobileStickyStore {
             frame: .zero, isVisible: true)
         stickies.insert(sticky, at: 0)
         commit(sticky.id)
+        Analytics.track(.stickyCreated, ["open_sticky_count": stickies.count])
         return sticky.id
     }
 
@@ -72,6 +74,7 @@ final class MobileStickyStore {
         let item = stickies.remove(at: from)
         stickies.insert(item, at: min(max(to, 0), stickies.count))
         persist()
+        Analytics.track(.stickiesReordered)
     }
 
     func setTitle(_ id: UUID, _ title: String) {
@@ -83,10 +86,12 @@ final class MobileStickyStore {
     /// aren't offered here even though `StickyColor` itself has the cases.
     func setColor(_ id: UUID, _ color: StickyColor) {
         mutate(id) { $0.colorID = color }
+        Analytics.track(.stickyColorChanged, ["color": color.rawValue])
     }
 
     func setFont(_ id: UUID, _ font: StickyFont) {
         mutate(id) { $0.fontID = font }
+        Analytics.track(.stickyFontChanged, ["font": font.rawValue])
     }
 
     func setItemText(_ id: UUID, _ itemID: UUID, _ text: String) {
@@ -101,15 +106,18 @@ final class MobileStickyStore {
             guard let idx = data.items.firstIndex(where: { $0.id == itemID }) else { return }
             data.items[idx].isDone.toggle()
             data.items[idx].completedAt = data.items[idx].isDone ? Date() : nil
+            Analytics.track(data.items[idx].isDone ? .itemCompleted : .itemReopened, ["via": "tap"])
         }
     }
 
     func addItem(_ id: UUID) {
         mutate(id) { $0.items.append(TodoItem()) }
+        Analytics.track(.itemAdded)
     }
 
     func deleteItem(_ id: UUID, _ itemID: UUID) {
         mutate(id) { $0.items.removeAll { $0.id == itemID } }
+        Analytics.track(.itemDeleted)
     }
 
     /// Removes a whole sticky — the mobile equivalent of the Mac's
@@ -117,6 +125,8 @@ final class MobileStickyStore {
     /// mobile has no archive-browsing UI yet, so offering it would just be
     /// a dead end.
     func deleteSticky(_ id: UUID) {
+        let itemCount = stickies.first { $0.id == id }?.items.count ?? 0
+        Analytics.track(.stickyDeleted, ["item_count": itemCount])
         stickies.removeAll { $0.id == id }
         persist()
         CloudSyncService.shared.delete(id: id, collection: .sticky)

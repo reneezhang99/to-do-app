@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import TootShared
+import ToodAnalytics
 
 enum StickyCaretEdge {
     case top
@@ -577,6 +578,9 @@ final class StickyController: NSObject, NSWindowDelegate {
         }
         completionUndoManager.setActionName(isDone ? "Complete Task" : "Reopen Task")
         model.setDone(id, isDone: isDone, completedAt: completedAt)
+
+        let via = completionUndoManager.isUndoing ? "undo" : completionUndoManager.isRedoing ? "redo" : "click"
+        Analytics.track(isDone ? .itemCompleted : .itemReopened, ["via": via])
     }
 
     func requestNewSticky() { manager?.newSticky() }
@@ -596,7 +600,7 @@ final class StickyController: NSObject, NSWindowDelegate {
     func requestClose() {
         switch AppSettings.shared.closeBehavior {
         case .alwaysArchive: manager?.archive(model.id); return
-        case .alwaysDelete: manager?.remove(model.id); return
+        case .alwaysDelete: deleteSticky(); return
         case .alwaysAsk: break
         }
 
@@ -617,10 +621,17 @@ final class StickyController: NSObject, NSWindowDelegate {
             manager?.archive(model.id)
             if alwaysDoThis { AppSettings.shared.closeBehavior = .alwaysArchive }
         case .alertSecondButtonReturn:
-            manager?.remove(model.id)
+            deleteSticky()
             if alwaysDoThis { AppSettings.shared.closeBehavior = .alwaysDelete }
         default: break // Cancel — leave closeBehavior alone either way
         }
+    }
+
+    /// Counted here rather than in `StickyManager.remove(_:)`, since archiving
+    /// and "Delete All" go through `remove` too and are tracked on their own.
+    private func deleteSticky() {
+        Analytics.track(.stickyDeleted, ["item_count": model.items.count])
+        manager?.remove(model.id)
     }
 
     // MARK: - NSWindowDelegate (frame sync)

@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		9BB19A29AE05D0D9EABB8AC7 /* TootShared in Frameworks */ = {isa = PBXBuildFile; productRef = 160BEA372B2A1E2685818EF1 /* TootShared */; };
+		F100000000000000000000F1 /* ToodAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = F200000000000000000000F2 /* ToodAnalytics */; };
+		F300000000000000000000F3 /* ToodAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = F200000000000000000000F2 /* ToodAnalytics */; };
 		D300000000000000000000D3 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = D200000000000000000000D2 /* Sparkle */; };
 		E300000000000000000000E3 /* TootShared in Frameworks */ = {isa = PBXBuildFile; productRef = E200000000000000000000E2 /* TootShared */; };
 		E400000000000000000000E4 /* TootShared in Frameworks */ = {isa = PBXBuildFile; productRef = E200000000000000000000E2 /* TootShared */; };
@@ -148,6 +150,7 @@
 			files = (
 				D300000000000000000000D3 /* Sparkle in Frameworks */,
 				E300000000000000000000E3 /* TootShared in Frameworks */,
+				F100000000000000000000F1 /* ToodAnalytics in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -156,6 +159,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E400000000000000000000E4 /* TootShared in Frameworks */,
+				F300000000000000000000F3 /* ToodAnalytics in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -242,6 +246,7 @@
 			packageProductDependencies = (
 				D200000000000000000000D2 /* Sparkle */,
 				E200000000000000000000E2 /* TootShared */,
+				F200000000000000000000F2 /* ToodAnalytics */,
 			);
 			productName = Tood;
 			productReference = A500000000000000000000A5 /* Tood.app */;
@@ -267,6 +272,7 @@
 			name = ToodMobile;
 			packageProductDependencies = (
 				E200000000000000000000E2 /* TootShared */,
+				F200000000000000000000F2 /* ToodAnalytics */,
 			);
 			productName = ToodMobile;
 			productReference = E73668B4302EE4B4005B383D /* ToodMobile.app */;
@@ -1143,6 +1149,10 @@
 		E200000000000000000000E2 /* TootShared */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = TootShared;
+		};
+		F200000000000000000000F2 /* ToodAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ToodAnalytics;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
