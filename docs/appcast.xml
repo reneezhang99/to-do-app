@@ -6,6 +6,31 @@
     <description>Automatic updates for Tood.</description>
     <language>en</language>
     <item>
+      <title>Version 1.8.2</title>
+      <pubDate>Sun, 18 Oct 2026 21:49:14 +0000</pubDate>
+      <sparkle:version>11</sparkle:version>
+      <sparkle:shortVersionString>1.8.2</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <!-- Sandboxed builds below 10 get a "Learn More" download instead of a
+           failing in-app install — see the note on the 1.8.1 entry. -->
+      <link>https://toodapp.com/api/download</link>
+      <sparkle:informationalUpdate>
+        <sparkle:belowVersion>10</sparkle:belowVersion>
+      </sparkle:informationalUpdate>
+      <description><![CDATA[
+        <p><b>Updating from an older version?</b> This one needs a one-time manual install. Click <b>Learn More</b> to download it, open the file, and drag Tood into Applications. Future updates will install automatically again.</p>
+        <ul>
+          <li>Fixed a sticky sometimes shrinking to nothing when adding new items</li>
+          <li>'Show less' now shows the full six items it promises</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/reneezhang99/to-do-app/releases/download/v1.8.2/Tood.dmg"
+        sparkle:edSignature="+5uzEHLSgPtbBbJwJfsrDOvLkLL7FqkbArhYUy2eyrG4vKbEsPPk3ULwdmigHsj3kGwealTlESoZ3IwLgwmaAw=="
+        length="3996406"
+        type="application/octet-stream" />
+    </item>
+    <item>
       <title>Version 1.8.1</title>
       <pubDate>Tue, 25 Aug 2026 18:15:00 +0000</pubDate>
       <sparkle:version>10</sparkle:version>
