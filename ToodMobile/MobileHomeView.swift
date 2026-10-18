@@ -94,7 +94,7 @@ struct MobileHomeView: View {
                     )
                 }
             }
-            .fullScreenCover(item: $selected.animation()) { id in
+            .fullScreenCover(item: $selected.animation(), onDismiss: { Analytics.screen("Home") }) { id in
                 if let sticky = store.stickies.first(where: { $0.id == id }) {
                     MobileStickyDetailView(id: sticky.id)
                         .onAppear { Analytics.screen("Sticky") }
