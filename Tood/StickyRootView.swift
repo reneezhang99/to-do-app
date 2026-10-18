@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import TootShared
+import ToodAnalytics
 
 private struct ChecklistRowFramePreferenceKey: PreferenceKey {
     static var defaultValue: [UUID: CGRect] = [:]
@@ -1389,6 +1390,7 @@ struct StickyRootView: View {
         let target = idx > 0 ? active[idx - 1].id : active[idx + 1].id
         controller.armSelectionSuppression()
         model.delete(item.id)
+        Analytics.track(.itemDeleted)
         focusedID = target
         return true
     }

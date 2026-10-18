@@ -237,10 +237,12 @@ final class StickyModel: Identifiable {
         if isNested { Analytics.track(.itemNested) }
     }
 
+    /// Not counted as `item_deleted` here: joining two rows with Backspace
+    /// deletes one behind the scenes too. The real delete is counted where
+    /// it happens, in `StickyRootView.backspaceDelete`.
     func delete(_ id: UUID) {
         items.removeAll { $0.id == id }
         notifyChanged()
-        Analytics.track(.itemDeleted)
     }
 
     /// Applies the reveal-time grouping once, preserving relative order
@@ -269,13 +271,16 @@ final class StickyModel: Identifiable {
     }
 
 
-    func setColor(_ c: StickyColor) {
+    /// `byUser: false` when the app sets it itself (onboarding painting the
+    /// first sticky with the color picked a step earlier), so it isn't
+    /// counted as someone changing a sticky's look.
+    func setColor(_ c: StickyColor, byUser: Bool = true) {
         colorID = c; notifyChanged()
-        Analytics.track(.stickyColorChanged, ["color": c.rawValue])
+        if byUser { Analytics.track(.stickyColorChanged, ["color": c.rawValue]) }
     }
-    func setFont(_ f: StickyFont) {
+    func setFont(_ f: StickyFont, byUser: Bool = true) {
         fontID = f; notifyChanged()
-        Analytics.track(.stickyFontChanged, ["font": f.rawValue])
+        if byUser { Analytics.track(.stickyFontChanged, ["font": f.rawValue]) }
     }
     func setTitle(_ t: String) { title = t; notifyChanged() }
 

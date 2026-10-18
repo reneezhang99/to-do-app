@@ -135,8 +135,8 @@ struct OnboardingView: View {
             if manager.order.isEmpty { manager.newSticky() }
             guard let id = manager.order.first else { return }
             let model = manager.controllers[id]?.model
-            model?.setColor(color ?? .pink)
-            model?.setFont(font)
+            model?.setColor(color ?? .pink, byUser: false)
+            model?.setFont(font, byUser: false)
             manager.controllers[id]?.bringToFront()
             previewSticky = model
             itemFieldFocused = true

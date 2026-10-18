@@ -138,6 +138,8 @@ final class StickyManager {
         updated.remove(at: from)
         let clamped = min(max(0, index), updated.count)
         updated.insert(id, at: clamped)
+        // Dropped right back where it started: nothing moved, nothing to count.
+        guard updated != order else { return }
         order = updated
         scheduleSave()
         Analytics.track(.stickiesReordered)
