@@ -75,7 +75,16 @@ public enum Analytics {
         // Crashes get saved and sent as `$exception` on the next launch.
         config.errorTrackingConfig.autoCapture = true
         config.optOut = !isEnabled
-        config.propertiesSanitizer = AppInfoStamp()
+        // Stamp these on every event, so every chart can split by them.
+        // Done here, not with `register(_:)`, because PostHog's own
+        // "Application Installed" fires during setup, before `register` could run.
+        config.setBeforeSend { event in
+            event.properties["platform"] = platform
+            // Debug builds still send, so you can watch events arrive while
+            // testing, but the dashboards filter them out.
+            event.properties["build_type"] = isDebugBuild ? "debug" : "release"
+            return event
+        }
         #if os(iOS)
         config.surveys = false
         #endif
@@ -105,7 +114,7 @@ public enum Analytics {
         PostHogSDK.shared.setPersonProperties(userPropertiesToSet: properties)
     }
 
-    fileprivate static var platform: String {
+    private static var platform: String {
         #if os(macOS)
         return "macOS"
         #else
@@ -113,25 +122,11 @@ public enum Analytics {
         #endif
     }
 
-    fileprivate static var isDebugBuild: Bool {
+    private static var isDebugBuild: Bool {
         #if DEBUG
         return true
         #else
         return false
         #endif
-    }
-}
-
-/// Adds `platform` and `build_type` to every event, so every chart can split
-/// by them. Done here, not with `register(_:)`, because PostHog's own
-/// "Application Installed" fires during setup, before `register` could run.
-private final class AppInfoStamp: NSObject, PostHogPropertiesSanitizer {
-    func sanitize(_ properties: [String: Any]) -> [String: Any] {
-        var stamped = properties
-        stamped["platform"] = Analytics.platform
-        // Debug builds still send, so you can watch events arrive while
-        // testing, but the dashboards filter them out.
-        stamped["build_type"] = Analytics.isDebugBuild ? "debug" : "release"
-        return stamped
     }
 }
