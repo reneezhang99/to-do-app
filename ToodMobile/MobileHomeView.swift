@@ -159,6 +159,9 @@ struct MobileHomeView: View {
                     }
                 }
                 .onEnded { _ in
+                    // One event per drag, however many cards it passed —
+                    // the same as the Mac counts a drop.
+                    if dragBaseline != 0 { Analytics.track(.stickiesReordered) }
                     withAnimation(.spring(duration: 0.35, bounce: 0.15)) {
                         draggingID = nil
                         dragOffset = 0
