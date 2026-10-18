@@ -119,7 +119,9 @@ final class StickyModel: Identifiable {
 
     @discardableResult
     func addItem(after item: TodoItem? = nil) -> UUID {
-        let new = TodoItem()
+        // A row made from a tucked-in row starts tucked in too, so a
+        // sub-list keeps going until you Shift-Tab out of it.
+        let new = TodoItem(isNested: item?.isNested ?? false)
         if let item, let idx = items.firstIndex(where: { $0.id == item.id }) {
             items.insert(new, at: idx + 1)
         } else {
@@ -141,12 +143,13 @@ final class StickyModel: Identifiable {
         let split = min(max(offset, 0), text.length)
         let new: TodoItem
 
+        let isNested = items[idx].isNested
         if split == 0 {
-            new = TodoItem()
+            new = TodoItem(isNested: isNested)
             items.insert(new, at: idx)
         } else {
             items[idx].text = text.substring(to: split)
-            new = TodoItem(text: text.substring(from: split))
+            new = TodoItem(text: text.substring(from: split), isNested: isNested)
             items.insert(new, at: idx + 1)
         }
 
@@ -191,8 +194,9 @@ final class StickyModel: Identifiable {
             items[idx].text = remaining.removeFirst()
         }
         var lastID: UUID?
+        let isNested = items[idx].isNested
         for line in remaining {
-            let newItem = TodoItem(text: line)
+            let newItem = TodoItem(text: line, isNested: isNested)
             items.insert(newItem, at: insertAt)
             insertAt += 1
             lastID = newItem.id
@@ -217,6 +221,19 @@ final class StickyModel: Identifiable {
         items[idx].isDone = isDone
         items[idx].completedAt = completedAt
         notifyChanged()
+    }
+
+    /// Tab tucks a row under the one above it; Shift-Tab pulls it back out.
+    /// Just one level, and the very first row can't be tucked because
+    /// there's nothing above it to sit under.
+    func setNested(_ id: UUID, _ isNested: Bool) {
+        guard let idx = items.firstIndex(where: { $0.id == id }),
+              items[idx].isNested != isNested,
+              !(isNested && idx == 0)
+        else { return }
+        items[idx].isNested = isNested
+        notifyChanged()
+        if isNested { Analytics.track(.itemNested) }
     }
 
     func delete(_ id: UUID) {

@@ -347,6 +347,10 @@ struct StickyRootView: View {
     private let chromeHeightEstimate: CGFloat = 254 // date line + title block + spacer + top/bottom padding
     /// Where "Show less" collapses back down to.
     private let defaultCollapsedRows = 6
+    /// How far a tucked-in row shifts right: the checkbox's 24pt column
+    /// plus the row's 19pt gap, so its checkbox lines up under the text of
+    /// the row above.
+    private let nestedIndent: CGFloat = 43
 
     private var color: StickyColor { model.color }
     private var completionAnimationsEnabled: Bool {
@@ -758,6 +762,10 @@ struct StickyRootView: View {
                 .fill(color.divider)
                 .frame(height: 1)
         }
+        // The divider moves in with the row, so a sub-list reads as its
+        // own little group under the row above.
+        .padding(.leading, item.isNested ? nestedIndent : 0)
+        .animation(accessibilityReduceMotion ? nil : .snappy(duration: 0.2), value: item.isNested)
         .background(
             GeometryReader { proxy in
                 Color.clear.preference(

@@ -111,6 +111,8 @@ struct TootWidgetEntryView: View {
                 .strikethrough(item.isDone, color: color.inkSecondary)
                 .lineLimit(1)
         }
+        // Tucked-in rows line up under the text above (12pt box + 8pt gap).
+        .padding(.leading, item.isNested ? 20 : 0)
     }
 
     private var emptyState: some View {

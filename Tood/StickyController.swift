@@ -181,6 +181,16 @@ final class StickyController: NSObject, NSWindowDelegate {
                 return nil
             }
 
+            // Tab tucks the current row under the one above it, Shift-Tab
+            // pulls it back out. Swallowed either way, so Tab inside the
+            // checklist never jumps focus to another field instead.
+            if event.keyCode == 48, commandModifiers.isEmpty || commandModifiers == .shift,
+               !self.model.isTitleFocused, let id = self.model.focusedItemID,
+               self.panel.firstResponder is NSTextView {
+                self.model.setNested(id, commandModifiers.isEmpty)
+                return nil
+            }
+
             // Everything below needs an actual text-editing caret to react
             // to — a collapsed selection inside a real NSTextView.
             guard commandModifiers.isEmpty,
@@ -212,6 +222,16 @@ final class StickyController: NSObject, NSWindowDelegate {
                 return nil
             }
 
+            // Return on an empty tucked-in row pulls it back out, so
+            // pressing Return twice ends a sub-list, like in Notes.
+            if (event.keyCode == 36 || event.keyCode == 76),
+               let id = self.model.focusedItemID,
+               editor.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               self.model.items.first(where: { $0.id == id })?.isNested == true {
+                self.model.setNested(id, false)
+                return nil
+            }
+
             // Treat checklist rows as blocks in one continuous editor.
             // Return splits at the caret; at column zero the existing item
             // moves down intact, while a middle split moves only the
@@ -220,6 +240,15 @@ final class StickyController: NSObject, NSWindowDelegate {
                let id = self.model.focusedItemID,
                !editor.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 self.model.onSplitItem?(id, caret)
+                return nil
+            }
+
+            // Backspace at the very start of a tucked-in row pulls it back
+            // out first. The next Backspace then deletes or joins as usual.
+            if event.keyCode == 51, caret == 0, !self.model.isTitleFocused,
+               let id = self.model.focusedItemID,
+               self.model.items.first(where: { $0.id == id })?.isNested == true {
+                self.model.setNested(id, false)
                 return nil
             }
 
