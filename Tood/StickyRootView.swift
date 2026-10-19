@@ -729,9 +729,6 @@ struct StickyRootView: View {
                         .tint(color.ink) // otherwise the cursor inherits the app's green accent — invisible on the green sticky
                         .lineLimit(1...12)
                         .focused($focusedID, equals: item.id)
-                        .onChange(of: bindingValue(item)) { _, newValue in
-                            handleDash(item, newValue)
-                        }
                         .onKeyPress(.return) {
                             submit(item)
                             return .handled
@@ -1393,15 +1390,6 @@ struct StickyRootView: View {
         Analytics.track(.itemDeleted)
         focusedID = target
         return true
-    }
-
-    private func handleDash(_ item: TodoItem, _ value: String) {
-        if value == "-" {
-            model.setText(item.id, "")
-            let newID = model.addItem(after: item)
-            revealIfHidden()
-            focusItem(newID, atUTF16Offset: 0)
-        }
     }
 
     private func isBlank(_ text: String) -> Bool {
