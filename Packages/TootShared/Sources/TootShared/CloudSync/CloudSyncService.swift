@@ -142,11 +142,16 @@ extension CloudSyncService: CKSyncEngineDelegate {
             saveState(update.stateSerialization)
 
         case .accountChange(let change):
+            // Saved change tags belong to the old account. Sending them to
+            // a different one makes every save fail, so forget them. Local
+            // data is kept either way: signing out never deletes stickies.
+            metadata.removeAll()
             switch change.changeType {
             case .signOut:
                 accountAvailable = false
             case .signIn, .switchAccounts:
                 accountAvailable = true
+                syncEngine.state.add(pendingDatabaseChanges: [.saveZone(CKRecordZone(zoneID: zoneID))])
             @unknown default:
                 break
             }
@@ -177,26 +182,50 @@ extension CloudSyncService: CKSyncEngineDelegate {
                 metadata.store(saved)
             }
             for failure in event.failedRecordSaves {
-                // A `.serverRecordChanged` conflict means another of the
-                // user's own devices saved a newer version first (this is
-                // a private, single-user database — there's no one else it
-                // could be). Re-queuing after refreshing our cached system
-                // fields to the server's copy is enough: the next batch
-                // rebuilds the record from local data on top of the
-                // server's change tag, so the retry actually succeeds
-                // instead of conflicting again. Whichever side's edit is
-                // newer wins for real once both are in — each store's own
-                // `applyRemoteChanges` compares timestamps, it doesn't just
-                // overwrite blindly.
-                if failure.error.code == .serverRecordChanged, let serverRecord = failure.error.serverRecord {
+                let recordID = failure.record.recordID
+                switch failure.error.code {
+                case .serverRecordChanged:
+                    // Another of the user's own devices saved this record
+                    // first (it's a private, single-user database). Hand the
+                    // server's copy to the local store, which keeps
+                    // whichever edit has the newer `updatedAt`, then retry on
+                    // top of the server's change tag. If the server's copy
+                    // won, the retry just re-sends that same copy. Without
+                    // the hand-off, the last device to upload always won,
+                    // even with an older edit.
+                    guard let serverRecord = failure.error.serverRecord else { break }
                     metadata.store(serverRecord)
-                    syncEngine.state.add(pendingRecordZoneChanges: [.saveRecord(failure.record.recordID)])
+                    if let (collection, _) = parse(recordID) {
+                        sources[collection]?.applyRemoteChanges([serverRecord])
+                    }
+                    syncEngine.state.add(pendingRecordZoneChanges: [.saveRecord(recordID)])
+
+                case .zoneNotFound:
+                    // The zone is gone, e.g. the user deleted Tood's iCloud
+                    // data in Settings. Make it again and re-send this
+                    // record as brand new.
+                    syncEngine.state.add(pendingDatabaseChanges: [.saveZone(CKRecordZone(zoneID: zoneID))])
+                    metadata.remove(recordID)
+                    syncEngine.state.add(pendingRecordZoneChanges: [.saveRecord(recordID)])
+
+                case .unknownItem:
+                    // The server no longer has this record, so our saved
+                    // change tag points at nothing. Forget it and re-send.
+                    metadata.remove(recordID)
+                    syncEngine.state.add(pendingRecordZoneChanges: [.saveRecord(recordID)])
+
+                default:
+                    // Network, busy, and rate-limit errors are retried by
+                    // CKSyncEngine itself.
+                    break
                 }
             }
 
         default:
             break
         }
+        // One disk write per batch of records, not one per record.
+        metadata.flush()
     }
 
     public func nextRecordZoneChangeBatch(_ context: CKSyncEngine.SendChangesContext, syncEngine: CKSyncEngine) async -> CKSyncEngine.RecordZoneChangeBatch? {

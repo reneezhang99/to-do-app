@@ -15,6 +15,10 @@ import Foundation
 final class RecordMetadataStore {
     private var cache: [String: Data] = [:]
     private let fileURL: URL
+    /// Changed since the last write to disk. A big sync touches hundreds of
+    /// records, and writing the whole file after each one added up to
+    /// seconds of stutter, so `flush()` writes once per batch instead.
+    private var isDirty = false
 
     init() {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -33,12 +37,18 @@ final class RecordMetadataStore {
         record.encodeSystemFields(with: coder)
         coder.finishEncoding()
         cache[record.recordID.recordName] = coder.encodedData
-        persist()
+        isDirty = true
     }
 
     func remove(_ recordID: CKRecord.ID) {
         cache.removeValue(forKey: recordID.recordName)
-        persist()
+        isDirty = true
+    }
+
+    /// Forgets every saved change tag, e.g. when the iCloud account changes.
+    func removeAll() {
+        cache.removeAll()
+        isDirty = true
     }
 
     /// Returns `record` with its change tag set to whatever we last saw for
@@ -59,8 +69,12 @@ final class RecordMetadataStore {
         return cached
     }
 
-    private func persist() {
-        guard let data = try? JSONEncoder().encode(cache) else { return }
+    /// Writes to disk if anything changed. If the app quits before this
+    /// runs, the worst case is a stale change tag, which just comes back as
+    /// a conflict that `CloudSyncService` already handles.
+    func flush() {
+        guard isDirty, let data = try? JSONEncoder().encode(cache) else { return }
         try? data.write(to: fileURL, options: .atomic)
+        isDirty = false
     }
 }

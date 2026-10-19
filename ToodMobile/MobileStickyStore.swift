@@ -15,6 +15,8 @@ final class MobileStickyStore {
     private(set) var stickies: [StickyData] = []
 
     private let fileURL: URL
+    /// The waiting save from the last edit, if any. See `commit(_:)`.
+    @ObservationIgnored private var pendingSave: Task<Void, Never>?
 
     init() {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -26,10 +28,7 @@ final class MobileStickyStore {
     }
 
     private func load() {
-        guard let data = try? Data(contentsOf: fileURL) else { return }
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        stickies = (try? decoder.decode([StickyData].self, from: data)) ?? []
+        stickies = SavedListFile.load(StickyData.self, from: fileURL)
     }
 
     private func persist() {
@@ -114,6 +113,20 @@ final class MobileStickyStore {
         Analytics.track(.itemAdded)
     }
 
+    /// The keyboard's indent button: tucks a row under the one above it, or
+    /// pulls it back out. Same rules as Tab on the Mac: one level only, and
+    /// the first row can't be tucked since nothing is above it.
+    func setItemNested(_ id: UUID, _ itemID: UUID, _ isNested: Bool) {
+        mutate(id) { data in
+            guard let idx = data.items.firstIndex(where: { $0.id == itemID }),
+                  data.items[idx].isNested != isNested,
+                  !(isNested && idx == 0)
+            else { return }
+            data.items[idx].isNested = isNested
+            if isNested { Analytics.track(.itemNested) }
+        }
+    }
+
     func deleteItem(_ id: UUID, _ itemID: UUID) {
         mutate(id) { $0.items.removeAll { $0.id == itemID } }
         Analytics.track(.itemDeleted)
@@ -144,9 +157,29 @@ final class MobileStickyStore {
         commit(id)
     }
 
+    /// Queuing the upload is cheap, and repeat queues of the same sticky
+    /// collapse into one. The disk write, widget refresh, and upload wait
+    /// for half a second of quiet instead. Doing all three on every
+    /// keystroke used up the widget's daily refresh budget (so it stopped
+    /// updating) and kept the main thread busy. Same idea as the Mac's
+    /// `scheduleSave()`.
     private func commit(_ id: UUID) {
-        persist()
         CloudSyncService.shared.save(id: id, collection: .sticky)
+        pendingSave?.cancel()
+        pendingSave = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(500))
+            guard !Task.isCancelled else { return }
+            self?.savePendingNow()
+        }
+    }
+
+    /// Writes a waiting edit right away. Called when the app leaves the
+    /// screen, so nothing typed in the last half second is lost.
+    func savePendingNow() {
+        guard pendingSave != nil else { return }
+        pendingSave?.cancel()
+        pendingSave = nil
+        persist()
         Task { await CloudSyncService.shared.pushLocalChanges() }
     }
 }

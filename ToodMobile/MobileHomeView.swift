@@ -127,7 +127,11 @@ struct MobileHomeView: View {
                 draggingID = id
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             }
-            .sequenced(before: DragGesture(minimumDistance: 15)
+            // Zero, so the drag takes over the moment the hold succeeds.
+            // With a minimum distance, holding and letting go without
+            // moving never started the drag, so `onEnded` below never ran
+            // and the card stayed stuck in its lifted look.
+            .sequenced(before: DragGesture(minimumDistance: 0)
                 .onChanged { value in
                     guard draggingID == id else { return }
                     // Effective distance since the last swap, not since the

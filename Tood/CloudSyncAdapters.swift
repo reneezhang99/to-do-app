@@ -12,20 +12,28 @@ final class ArchivedStickySyncAdapter: SyncCollectionSource {
     private let service: StickyArchiveService
     init(service: StickyArchiveService) { self.service = service }
 
+    /// Archived stickies never change, so a copy in memory stays correct.
+    /// A big upload asks for hundreds of records in a row, and re-reading
+    /// the whole archive file for each one made first sync crawl. A miss
+    /// (something archived since) just re-reads the file.
+    private var cache: [UUID: ArchivedSticky] = [:]
+
     func record(for id: UUID, zoneID: CKRecordZone.ID) -> CKRecord? {
-        service.load().first { $0.id == id }?.toRecord(zoneID: zoneID)
+        if cache[id] == nil {
+            cache = Dictionary(service.load().map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        }
+        return cache[id]?.toRecord(zoneID: zoneID)
     }
 
     func applyRemoteChanges(_ records: [CKRecord]) {
-        let existingIDs = Set(service.load().map(\.id))
-        for record in records {
-            guard let archived = ArchivedSticky.from(record), !existingIDs.contains(archived.id) else { continue }
-            service.append(archived)
-        }
+        var seen = Set(service.load().map(\.id))
+        let new = records.compactMap(ArchivedSticky.from).filter { seen.insert($0.id).inserted }
+        service.append(new)
     }
 
     func applyRemoteDeletions(_ ids: [UUID]) {
-        for id in ids { service.delete(id) }
+        service.delete(ids)
+        for id in ids { cache[id] = nil }
     }
 }
 
@@ -38,8 +46,15 @@ final class ArchivedItemSyncAdapter: SyncCollectionSource {
     private let service: ArchiveService
     init(service: ArchiveService) { self.service = service }
 
+    /// Same in-memory copy as `ArchivedStickySyncAdapter`'s, for the same
+    /// reason: archived items never change once written.
+    private var cache: [UUID: ArchivedItem] = [:]
+
     func record(for id: UUID, zoneID: CKRecordZone.ID) -> CKRecord? {
-        service.load().first { $0.id == id }?.toRecord(zoneID: zoneID)
+        if cache[id] == nil {
+            cache = Dictionary(service.load().map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        }
+        return cache[id]?.toRecord(zoneID: zoneID)
     }
 
     func applyRemoteChanges(_ records: [CKRecord]) {

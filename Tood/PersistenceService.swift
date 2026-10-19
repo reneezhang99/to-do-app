@@ -21,10 +21,7 @@ struct PersistenceService {
     var hasSavedFile: Bool { FileManager.default.fileExists(atPath: fileURL.path) }
 
     func load() -> [StickyData] {
-        guard let data = try? Data(contentsOf: fileURL) else { return [] }
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        return (try? decoder.decode([StickyData].self, from: data)) ?? []
+        SavedListFile.load(StickyData.self, from: fileURL)
     }
 
     func save(_ stickies: [StickyData]) {

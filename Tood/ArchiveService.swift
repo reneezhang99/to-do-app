@@ -16,10 +16,7 @@ struct ArchiveService {
     private var fileURL: URL { directory.appendingPathComponent(fileName) }
 
     func load() -> [ArchivedItem] {
-        guard let data = try? Data(contentsOf: fileURL) else { return [] }
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        return (try? decoder.decode([ArchivedItem].self, from: data)) ?? []
+        SavedListFile.load(ArchivedItem.self, from: fileURL)
     }
 
     func append(_ items: [ArchivedItem]) {

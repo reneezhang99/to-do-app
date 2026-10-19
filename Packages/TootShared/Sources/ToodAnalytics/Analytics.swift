@@ -20,6 +20,7 @@ public enum AnalyticsEvent: String {
     case itemCompleted = "item_completed"
     case itemReopened = "item_reopened"
     case itemDeleted = "item_deleted"
+    case itemNested = "item_nested"
 
     // Mac only
     case stickyArchived = "sticky_archived"
@@ -27,7 +28,6 @@ public enum AnalyticsEvent: String {
     case archivedStickyDeleted = "archived_sticky_deleted"
     case allStickiesDeleted = "all_stickies_deleted"
     case stickyShortcutUsed = "sticky_shortcut_used"
-    case itemNested = "item_nested"
     case journalEntryStarted = "journal_entry_started"
     case onboardingStarted = "onboarding_started"
     case onboardingCompleted = "onboarding_completed"

@@ -6,11 +6,14 @@ import AppKit
 /// recomputes the next boundary rather than adding 24h.
 @MainActor
 final class RolloverScheduler {
-    private let onRollover: () -> Void
+    private let onRollover: () async -> Void
     private var timer: Timer?
     private let defaultsKey = "today.lastRolloverDay"
+    /// The rollover waits on an iCloud pull now, so wake and the midnight
+    /// timer could otherwise both start one before the first finishes.
+    private var isRunning = false
 
-    init(onRollover: @escaping () -> Void) {
+    init(onRollover: @escaping () async -> Void) {
         self.onRollover = onRollover
     }
 
@@ -34,12 +37,19 @@ final class RolloverScheduler {
 
     /// Runs the rollover only if we haven't already rolled over today.
     private func runIfNeeded() {
+        guard !isRunning else { return }
         let today = Calendar.current.startOfDay(for: Date())
         let last = (UserDefaults.standard.object(forKey: defaultsKey) as? Date)
             .map { Calendar.current.startOfDay(for: $0) }
         if last == today { return }
-        onRollover()
-        UserDefaults.standard.set(today, forKey: defaultsKey)
+        isRunning = true
+        Task {
+            await onRollover()
+            // Marked done only after it actually ran, so quitting halfway
+            // through the iCloud pull doesn't skip a whole day's cleanup.
+            UserDefaults.standard.set(today, forKey: defaultsKey)
+            isRunning = false
+        }
     }
 
     private func scheduleNextMidnight() {

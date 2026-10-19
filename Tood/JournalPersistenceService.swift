@@ -18,10 +18,7 @@ struct JournalPersistenceService {
     private var fileURL: URL { directory.appendingPathComponent(fileName) }
 
     func load() -> [JournalEntry] {
-        guard let data = try? Data(contentsOf: fileURL) else { return [] }
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        return (try? decoder.decode([JournalEntry].self, from: data)) ?? []
+        SavedListFile.load(JournalEntry.self, from: fileURL)
     }
 
     func save(_ entries: [JournalEntry]) {

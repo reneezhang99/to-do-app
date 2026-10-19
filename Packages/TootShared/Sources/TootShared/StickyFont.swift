@@ -14,6 +14,13 @@ public enum StickyFont: String, CaseIterable, Codable, Identifiable {
     case stefan      // "Cute" — ABC Stefan Trial (Simple), bundled
     case bradley     // "Handwritten" — Bradley Hand
 
+    /// Same idea as `StickyColor`'s: a font from a newer version reads as
+    /// Basic instead of making the whole sticky unreadable.
+    public init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = StickyFont(rawValue: raw) ?? .helvetica
+    }
+
     public var id: String { rawValue }
 
     public var displayName: String {
