@@ -64,6 +64,11 @@ final class GoogleAuthService: NSObject {
         isConnected = KeychainStore.read(key: Keys.refreshToken) != nil
         connectedEmail = UserDefaults.standard.string(forKey: Keys.email)
         super.init()
+        // Anyone who connected before the email lookup was fixed has none
+        // saved. Fill it in once, quietly.
+        if isConnected, connectedEmail == nil {
+            Task { try? await fetchAndStoreEmail() }
+        }
     }
 
     // MARK: - Connect / disconnect
@@ -188,15 +193,21 @@ final class GoogleAuthService: NSObject {
         try? await fetchAndStoreEmail()
     }
 
+    /// The account's email, for "Connected as …" in Settings. Read from the
+    /// primary calendar, whose ID *is* the account's email, because that
+    /// works with the calendar-only permission we already ask for. The old
+    /// `userinfo` lookup needed an extra "email" permission we never asked
+    /// for, so it always failed and the email never showed.
     private func fetchAndStoreEmail() async throws {
-        guard let accessToken else { return }
-        var request = URLRequest(url: URL(string: "https://www.googleapis.com/oauth2/v2/userinfo")!)
+        let accessToken = try await validAccessToken()
+        var request = URLRequest(url: URL(string: "https://www.googleapis.com/calendar/v3/calendars/primary")!)
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        let (data, _) = try await URLSession.shared.data(for: request)
-        if let info = try? JSONDecoder().decode(UserInfo.self, from: data) {
-            connectedEmail = info.email
-            UserDefaults.standard.set(info.email, forKey: Keys.email)
-        }
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try Self.checkOK(response, data)
+        let calendar = try JSONDecoder().decode(PrimaryCalendar.self, from: data)
+        guard calendar.id.contains("@") else { return }
+        connectedEmail = calendar.id
+        UserDefaults.standard.set(calendar.id, forKey: Keys.email)
     }
 
     // MARK: - PKCE
@@ -260,8 +271,8 @@ private struct TokenResponse: Decodable {
     }
 }
 
-private struct UserInfo: Decodable {
-    let email: String
+private struct PrimaryCalendar: Decodable {
+    let id: String
 }
 
 private extension Data {

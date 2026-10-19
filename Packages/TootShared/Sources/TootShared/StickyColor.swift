@@ -16,6 +16,14 @@ public enum StickyColor: String, CaseIterable, Codable, Identifiable {
     case candyYellow    // #FFE74E
     case candyMint      // #94F48F
 
+    /// A color this version doesn't know yet (picked on a newer build,
+    /// synced over) reads as pink instead of failing. A failed read used
+    /// to drop the whole sticky, or blank the whole saved list.
+    public init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = StickyColor(rawValue: raw) ?? .pink
+    }
+
     public var id: String { rawValue }
 
     public var displayName: String {

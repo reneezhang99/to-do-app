@@ -13,6 +13,13 @@ export const config = {
   },
 };
 
+// Anyone on the internet can POST here, so cap how much one sender can
+// push through. Without this, a loop could flood the inbox and burn the
+// Resend quota until real reports start failing.
+const MAX_TEXT_LENGTH = 10_000;
+const PER_IP_PER_HOUR = 5;
+const ALL_SENDERS_PER_DAY = 200;
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
@@ -31,6 +38,15 @@ export default async function handler(req, res) {
   const trimmedText = typeof text === "string" ? text.trim() : "";
   if (!trimmedText) {
     res.status(400).json({ error: "Missing bug description" });
+    return;
+  }
+  if (trimmedText.length > MAX_TEXT_LENGTH) {
+    res.status(413).json({ error: "Bug description is too long" });
+    return;
+  }
+
+  if (await isOverLimit(req)) {
+    res.status(429).json({ error: "Too many reports, try again later" });
     return;
   }
 
@@ -74,6 +90,41 @@ export default async function handler(req, res) {
   } catch (err) {
     console.error("report-bug error:", err);
     res.status(500).json({ error: "Failed to send" });
+  }
+}
+
+// Counts reports in the same KV store the download counter uses: one
+// counter per sender IP per hour, plus one for everyone per day. If KV
+// isn't set up or doesn't answer, let the report through: a real bug
+// report matters more than a perfect limit.
+async function isOverLimit(req) {
+  const kvUrl = process.env.KV_REST_API_URL;
+  const kvToken = process.env.KV_REST_API_TOKEN;
+  if (!kvUrl || !kvToken) return false;
+
+  const ip = String(req.headers["x-forwarded-for"] || "unknown").split(",")[0].trim();
+  const hour = new Date().toISOString().slice(0, 13); // e.g. 2026-10-18T21
+  const day = hour.slice(0, 10);
+  const ipKey = `bugreport:ip:${ip}:${hour}`;
+  const dayKey = `bugreport:all:${day}`;
+
+  try {
+    const resp = await fetch(`${kvUrl}/pipeline`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${kvToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify([
+        ["INCR", ipKey],
+        ["EXPIRE", ipKey, 3600],
+        ["INCR", dayKey],
+        ["EXPIRE", dayKey, 86400],
+      ]),
+    });
+    if (!resp.ok) return false;
+    const [ipCount, , dayCount] = (await resp.json()).map((r) => Number(r.result));
+    return ipCount > PER_IP_PER_HOUR || dayCount > ALL_SENDERS_PER_DAY;
+  } catch (err) {
+    console.error("report-bug rate limit check failed", err);
+    return false;
   }
 }
 

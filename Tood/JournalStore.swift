@@ -53,6 +53,9 @@ final class JournalStore {
                   let idx = self.entries.firstIndex(where: { Calendar.current.isDateInToday($0.day) })
             else { return }
             self.entries[idx].locationLabel = label
+            // Counts as an edit, so it uploads and other devices take it.
+            self.entries[idx].updatedAt = Date()
+            CloudSyncService.shared.save(id: self.entries[idx].id, collection: .journalEntry)
             self.scheduleSave()
         }
     }

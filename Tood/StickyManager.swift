@@ -27,7 +27,7 @@ final class StickyManager {
     @ObservationIgnored private var saveTimer: Timer?
 
     init() {
-        rollover = RolloverScheduler(onRollover: { [weak self] in self?.performRollover() })
+        rollover = RolloverScheduler(onRollover: { [weak self] in await self?.performRollover() })
     }
 
     // MARK: - Lifecycle
@@ -283,7 +283,13 @@ final class StickyManager {
     // MARK: - Rollover
 
     /// Move completed items into the archive; keep unfinished; advance the day.
-    private func performRollover() {
+    ///
+    /// Pulls from iCloud first. The rollover stamps every sticky as edited
+    /// "now", and it often runs right at launch or wake, before the Mac has
+    /// seen anything new. Without the pull, that stamp made the Mac's stale
+    /// copies look newest, and they overwrote edits made on the phone.
+    private func performRollover() async {
+        await CloudSyncService.shared.pullRemoteChanges()
         var archived: [ArchivedItem] = []
         let now = Date()
         for id in order {

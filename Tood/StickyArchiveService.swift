@@ -18,10 +18,7 @@ struct StickyArchiveService {
     private var fileURL: URL { directory.appendingPathComponent(fileName) }
 
     func load() -> [ArchivedSticky] {
-        guard let data = try? Data(contentsOf: fileURL) else { return [] }
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        return (try? decoder.decode([ArchivedSticky].self, from: data)) ?? []
+        SavedListFile.load(ArchivedSticky.self, from: fileURL)
     }
 
     private func save(_ all: [ArchivedSticky]) {
@@ -33,16 +30,29 @@ struct StickyArchiveService {
     }
 
     func append(_ sticky: ArchivedSticky) {
+        append([sticky])
+    }
+
+    /// Adds several in one read and one write (iCloud hands them over in
+    /// batches).
+    func append(_ stickies: [ArchivedSticky]) {
+        guard !stickies.isEmpty else { return }
         var all = load()
-        all.append(sticky)
+        all.append(contentsOf: stickies)
         save(all)
     }
 
     /// Removes an archived sticky for good — the archive view's own
     /// "Delete" action, for actually cleaning up old memories.
     func delete(_ id: UUID) {
+        delete([id])
+    }
+
+    func delete(_ ids: [UUID]) {
+        guard !ids.isEmpty else { return }
+        let ids = Set(ids)
         var all = load()
-        all.removeAll { $0.id == id }
+        all.removeAll { ids.contains($0.id) }
         save(all)
     }
 

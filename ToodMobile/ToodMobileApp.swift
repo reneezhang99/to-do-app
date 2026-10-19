@@ -39,6 +39,10 @@ struct ToodMobileApp: App {
                     Task { @MainActor in await store.refreshFromCloud() }
                 }
             default:
+                // Edits wait half a second before saving (see
+                // `MobileStickyStore.commit`), so write them now, before
+                // the app can be suspended.
+                store.savePendingNow()
                 foregroundPullTimer?.invalidate()
                 foregroundPullTimer = nil
             }
