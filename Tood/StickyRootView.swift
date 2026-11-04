@@ -83,7 +83,7 @@ private struct CompletionStrikethrough: View {
     private var decoratedText: some View {
         Text(text)
             .font(font)
-            .foregroundStyle(.clear)
+            .foregroundStyle(color)
             .strikethrough(true, color: color)
             .lineLimit(1...12)
             .frame(maxWidth: .infinity, alignment: .leading)
